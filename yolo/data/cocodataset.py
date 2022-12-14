@@ -1,13 +1,24 @@
-import os
-import numpy as np
+# -*- coding: utf-8 -*-
 
-import torch
+import os
+
 from torch.utils.data import Dataset
-import cv2
 from pycocotools.coco import COCO
 
 from yolo.utils.utils import *
 
+"""
+图像预处理：
+
+1. 左右翻转
+2. 空间抖动
+3. 颜色抖动
+4. 图像缩放
+5. 颜色通道转换
+
+对于真值标签框，忽略小于指定大小的边界框；并且指定了每幅图像使用的标签个数
+
+"""
 
 class COCODataset(Dataset):
     """
@@ -102,12 +113,15 @@ class COCODataset(Dataset):
             img = cv2.imread(img_file)
         assert img is not None
 
-        img, info_img = preprocess(img, self.img_size, jitter=self.jitter,
-                                   random_placing=self.random_placing)
+        # 对于目标检测任务的图像预处理，需要考虑到预处理前后真值边界框的同步变化
+        # 对于颜色预处理（颜色抖动／随机遮挡），不需要考虑，直接处理图片即可
+        # 对于几何预处理（空间抖动／左右翻转），需要注意预处理后的图片相对位置变化
+        img, info_img = preprocess(img, self.img_size, jitter=self.jitter, random_placing=self.random_placing)
 
         if self.random_distort:
             img = random_distort(img, self.hue, self.saturation, self.exposure)
 
+        # 归一化
         img = np.transpose(img / 255., (2, 0, 1))
 
         if lrflip:
@@ -118,7 +132,9 @@ class COCODataset(Dataset):
         for anno in annotations:
             if anno['bbox'][2] > self.min_size and anno['bbox'][3] > self.min_size:
                 labels.append([])
+                # 类别ID
                 labels[-1].append(self.class_ids.index(anno['category_id']))
+                # 类别框
                 labels[-1].extend(anno['bbox'])
 
         padded_labels = np.zeros((self.max_labels, 5))
