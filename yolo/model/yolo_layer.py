@@ -225,6 +225,10 @@ class YOLOLayer(nn.Module):
         # loss calculation
 
         output[..., 4] *= obj_mask
+        # print(type(tgt_mask), type(output))
+        # print(tgt_mask.shape, output.shape)
+        # print(type(tgt_mask[0, 0, 0, 0, 0]), type(output[0, 0, 0, 0, 0]))
+        # print(tgt_mask[0, 0, 0, 0, 0], output[0, 0, 0, 0, 0])
         output[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
         output[..., 2:4] *= tgt_scale
 
