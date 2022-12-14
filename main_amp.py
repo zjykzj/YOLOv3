@@ -4,18 +4,13 @@ import shutil
 import time
 
 import torch
-import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
 import torchvision.models as models
-
-import numpy as np
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -26,9 +21,10 @@ except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
 import yaml
-from yolo.model.yolov3 import YOLOv3
-from yolo.data.cocodataset import COCODataset
-from yolo.utils.cocoapi_evaluator import COCOAPIEvaluator
+
+from yolo.model.build import build_model
+from yolo.optim.build import build_optimizer
+from yolo.data.build import build_data, build_evaluator
 
 
 def to_python_float(t):
@@ -36,21 +32,6 @@ def to_python_float(t):
         return t.item()
     else:
         return t[0]
-
-
-def fast_collate(batch, memory_format):
-    imgs = [img[0] for img in batch]
-    targets = torch.tensor([target[1] for target in batch], dtype=torch.int64)
-    w = imgs[0].size[0]
-    h = imgs[0].size[1]
-    tensor = torch.zeros((len(imgs), 3, h, w), dtype=torch.uint8).contiguous(memory_format=memory_format)
-    for i, img in enumerate(imgs):
-        nump_array = np.asarray(img, dtype=np.uint8)
-        if (nump_array.ndim < 3):
-            nump_array = np.expand_dims(nump_array, axis=-1)
-        nump_array = np.rollaxis(nump_array, 2)
-        tensor[i] += torch.from_numpy(nump_array)
-    return tensor, targets
 
 
 def parse():
@@ -111,7 +92,6 @@ def parse():
 
 
 def main():
-    # global best_prec1, args
     global best_ap50_95, args
 
     args = parse()
@@ -151,36 +131,8 @@ def main():
 
     assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
-    if args.channels_last:
-        memory_format = torch.channels_last
-    else:
-        memory_format = torch.contiguous_format
-
-    # create model
-    # if args.pretrained:
-    #     print("=> using pre-trained model '{}'".format(args.arch))
-    #     model = models.__dict__[args.arch](pretrained=True)
-    # else:
-    #     print("=> creating model '{}'".format(args.arch))
-    #     model = models.__dict__[args.arch]()
-
-    # 预测正样本框阈值
-    ignore_thre = cfg['TRAIN']['IGNORETHRE']
-    model = YOLOv3(cfg['MODEL'], ignore_thre=ignore_thre)
-
-    if args.sync_bn:
-        import apex
-        print("using apex synced BN")
-        model = apex.parallel.convert_syncbn_model(model)
-
-    # 默认在GPU环境下训练，差别在于是否进行分布式训练
-    model = model.cuda().to(memory_format=memory_format)
-
-    # Scale learning rate based on global batch size
-    args.lr = args.lr * float(args.batch_size * args.world_size) / 256.
-    optimizer = torch.optim.SGD(model.parameters(), args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay)
+    model = build_model(args, cfg)
+    optimizer = build_optimizer(args, model)
 
     # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
     # for convenient interoperation with argparse.
@@ -201,9 +153,6 @@ def main():
         # delay_allreduce delays all communication to the end of the backward pass.
         model = DDP(model, delay_allreduce=True)
 
-    # define loss function (criterion) and optimizer
-    # criterion = nn.CrossEntropyLoss().cuda()
-
     # Optionally resume from a checkpoint
     if args.resume:
         # Use a local scope to avoid dangling references
@@ -223,64 +172,8 @@ def main():
 
         resume()
 
-    # Data loading code
-    # traindir = os.path.join(args.data, 'train')
-    # valdir = os.path.join(args.data, 'val')
-    # if (args.arch == "inception_v3"):
-    #     raise RuntimeError("Currently, inception_v3 is not supported by this example.")
-    #     # crop_size = 299
-    #     # val_size = 320 # I chose this value arbitrarily, we can adjust.
-    # else:
-    #     crop_size = 224
-    #     val_size = 256
-
-    # YOLO使用的数据集，对于测试集，采用了COCO提供的评估器
-    imgsize = cfg['TRAIN']['IMGSIZE']
-    train_dataset = COCODataset(model_type=cfg['MODEL']['TYPE'],
-                                # data_dir='COCO/',
-                                data_dir=args.data,
-                                img_size=imgsize,
-                                augmentation=cfg['AUGMENTATION'])
-
-    # train_dataset = datasets.ImageFolder(
-    #     traindir,
-    #     transforms.Compose([
-    #         transforms.RandomResizedCrop(crop_size),
-    #         transforms.RandomHorizontalFlip(),
-    #         # transforms.ToTensor(), Too slow
-    #         # normalize,
-    #     ]))
-    # val_dataset = datasets.ImageFolder(valdir, transforms.Compose([
-    #     transforms.Resize(val_size),
-    #     transforms.CenterCrop(crop_size),
-    # ]))
-
-    train_sampler = None
-    # val_sampler = None
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        # val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
-
-    # collate_fn = lambda b: fast_collate(b, memory_format)
-
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
-        num_workers=args.workers, pin_memory=True, sampler=train_sampler)
-    # num_workers=args.workers, pin_memory=True, sampler=train_sampler, collate_fn=collate_fn)
-
-    # val_loader = torch.utils.data.DataLoader(
-    #     val_dataset,
-    #     batch_size=args.batch_size, shuffle=False,
-    #     num_workers=args.workers, pin_memory=True,
-    #     sampler=val_sampler,
-    #     collate_fn=collate_fn)
-
-    evaluator = COCOAPIEvaluator(model_type=cfg['MODEL']['TYPE'],
-                                 # data_dir='COCO/',
-                                 data_dir=args.data,
-                                 img_size=cfg['TEST']['IMGSIZE'],
-                                 confthre=cfg['TEST']['CONFTHRE'],
-                                 nmsthre=cfg['TEST']['NMSTHRE'])
+    train_sampler, train_loader = build_data(args, cfg)
+    evaluator = build_evaluator(args, cfg)
 
     if args.evaluate:
         # validate(val_loader, model, criterion)
@@ -375,23 +268,16 @@ def train(train_loader, model, optimizer, epoch):
             # For best performance, it doesn't make sense to print these metrics every
             # iteration, since they incur an allreduce and some host<->device syncs.
 
-            # Measure accuracy
-            # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-
             # Average loss and accuracy across processes for logging
             if args.distributed:
                 reduced_loss = reduce_tensor(loss.data)
                 loss_dict = model.module.loss_dict
-                # prec1 = reduce_tensor(prec1)
-                # prec5 = reduce_tensor(prec5)
             else:
                 reduced_loss = loss.data
                 loss_dict = model.loss_dict
 
             # to_python_float incurs a host<->device sync
             losses.update(to_python_float(reduced_loss), input.size(0))
-            # top1.update(to_python_float(prec1), input.size(0))
-            # top5.update(to_python_float(prec5), input.size(0))
 
             torch.cuda.synchronize()
             batch_time.update((time.time() - end) / args.print_freq)
@@ -405,23 +291,6 @@ def train(train_loader, model, optimizer, epoch):
                          loss_dict['conf'], loss_dict['cls'],
                          loss_dict['l2']),
                       flush=True)
-                # print('Epoch: [{0}][{1}/{2}]\t'
-                #       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                #       'Speed {3:.3f} ({4:.3f})\t'
-                #       'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
-                #       'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                #       'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-                #     epoch, i, len(train_loader),
-                #     args.world_size * args.batch_size / batch_time.val,
-                #     args.world_size * args.batch_size / batch_time.avg,
-                #     batch_time=batch_time,
-                #     loss=losses, top1=top1, top5=top5))
-        # if args.prof >= 0: torch.cuda.nvtx.range_push("prefetcher.next()")
-        # input, target = prefetcher.next()
-        # if args.prof >= 0: torch.cuda.nvtx.range_pop()
-
-        # Pop range "Body of iteration {}".format(i)
-        if args.prof >= 0: torch.cuda.nvtx.range_pop()
 
         if args.prof >= 0 and i == args.prof + 10:
             print("Profiling ended at iteration {}".format(i))
