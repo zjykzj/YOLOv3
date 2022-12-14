@@ -187,7 +187,7 @@ def main():
 
         # train for one epoch
         # train(train_loader, model, criterion, optimizer, epoch)
-        train(train_loader, model, optimizer, epoch)
+        train(train_loader, model, optimizer, epoch, cfg['TRAIN']['SUBDIVISION'])
 
         # evaluate on validation set
         # prec1 = validate(val_loader, model, criterion)
@@ -213,7 +213,7 @@ def main():
 
 
 # def train(train_loader, model, criterion, optimizer, epoch):
-def train(train_loader, model, optimizer, epoch):
+def train(train_loader, model, optimizer, epoch, accumulate_steps):
     batch_time = AverageMeter()
     losses = AverageMeter()
     # top1 = AverageMeter()
@@ -223,11 +223,7 @@ def train(train_loader, model, optimizer, epoch):
     model.train()
     end = time.time()
 
-    # prefetcher = data_prefetcher(train_loader)
-    # input, target = prefetcher.next()
-    # i = 0
-    # while input is not None:
-    #     i += 1
+    optimizer.zero_grad()
     for i, (input, target, _, _) in enumerate(train_loader):
         if args.prof >= 0 and i == args.prof:
             print("Profiling begun at iteration {}".format(i))
@@ -248,9 +244,6 @@ def train(train_loader, model, optimizer, epoch):
         if args.prof >= 0: torch.cuda.nvtx.range_pop()
         # loss = criterion(output, target)
 
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-
         if args.prof >= 0: torch.cuda.nvtx.range_push("backward")
         with amp.scale_loss(loss, optimizer) as scaled_loss:
             scaled_loss.backward()
@@ -259,9 +252,10 @@ def train(train_loader, model, optimizer, epoch):
         # for param in model.parameters():
         #     print(param.data.double().sum().item(), param.grad.data.double().sum().item())
 
-        if args.prof >= 0: torch.cuda.nvtx.range_push("optimizer.step()")
-        optimizer.step()
-        if args.prof >= 0: torch.cuda.nvtx.range_pop()
+        if i % accumulate_steps == 0:
+            # compute gradient and do SGD step
+            optimizer.zero_grad()
+            optimizer.step()
 
         if i % args.print_freq == 0:
             # Every print_freq iterations, check the loss, accuracy, and speed.

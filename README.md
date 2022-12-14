@@ -5,6 +5,8 @@ Base library from [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) 
 
 ## Train
 
+1. 默认将配置文件保存在
+
 * 单GPU训练
 
 ```shell
