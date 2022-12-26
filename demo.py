@@ -1,13 +1,24 @@
 import argparse
 import yaml
 
-import cv2
-import torch
 from torch.autograd import Variable
+
+from easydict import EasyDict
 
 from yolo.model.yolov3 import *
 from yolo.utils.utils import *
 from yolo.utils.parse_yolo_weights import parse_yolo_weights
+
+"""
+操作流程：
+
+1. 解析命令行参数 + 配置文件（使用easydict）
+2. 读取图像，预处理（图像通道转换 + 图像缩放 + 数据归一化 + 维度转换 + 数据格式转换）
+3. 创建模型，加载预训练权重
+4. 模型推理 + 数据后处理（置信度阈值过滤 + NMS阈值过滤）
+5. 预测框坐标转换
+6. 预测框绘制
+"""
 
 
 def parse_args():
@@ -27,26 +38,9 @@ def parse_args():
     return args
 
 
-def main():
-    """
-    Visualize the detection result for the given image and the pre-trained model.
-    """
-    args = parse_args()
-    with open(args.cfg, 'r') as f:
-        # cfg = yaml.load(f)
-        cfg = yaml.safe_load(f)
-
+def image_preprocess(args, cfg: EasyDict):
     # 输入图像大小
-    imgsize = cfg['TEST']['IMGSIZE']
-    # 创建YOLOv3
-    model = YOLOv3(cfg['MODEL'])
-
-    confthre = cfg['TEST']['CONFTHRE']
-    nmsthre = cfg['TEST']['NMSTHRE']
-
-    if args.detect_thresh:
-        confthre = args.detect_thresh
-
+    imgsize = cfg.TEST.IMGSIZE
     # BGR
     img = cv2.imread(args.image)
     # [H, W, C] -> [C, H, W]　同时　BGR -> RGB
@@ -58,11 +52,17 @@ def main():
     img = torch.from_numpy(img).float().unsqueeze(0)
 
     if args.gpu >= 0:
-        model.cuda(args.gpu)
         img = Variable(img.type(torch.cuda.FloatTensor))
     else:
         img = Variable(img.type(torch.FloatTensor))
 
+    return img, img_raw, info_img
+
+
+def model_preprocess(args, cfg):
+    model = YOLOv3(cfg.MODEL)
+    if args.gpu >= 0:
+        model.cuda(args.gpu)
     assert args.weights_path or args.ckpt, 'One of --weights_path and --ckpt must be specified'
 
     if args.weights_path:
@@ -78,6 +78,26 @@ def main():
             model.load_state_dict(state)
 
     model.eval()
+    return model
+
+
+def main():
+    """
+    Visualize the detection result for the given image and the pre-trained model.
+    """
+    args = parse_args()
+    with open(args.cfg, 'r') as f:
+        cfg = yaml.safe_load(f)
+    cfg = EasyDict(d=cfg)
+
+    img, img_raw, info_img = image_preprocess(args, cfg)
+    # 创建YOLOv3
+    model = model_preprocess(args, cfg)
+
+    confthre = cfg.TEST.CONFTHRE
+    nmsthre = cfg.TEST.NMSTHRE
+    if args.detect_thresh:
+        confthre = args.detect_thresh
 
     with torch.no_grad():
         # img: [1, 3, 416, 416]
