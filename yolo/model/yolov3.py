@@ -4,6 +4,18 @@ import torch.nn as nn
 from collections import defaultdict
 from .yolo_layer import YOLOLayer
 
+"""
+操作流程：
+
+1. 输入图像数据[B, C, H, W]
+2. 从上到下执行特征提取，减少空间尺寸，增大通道数目，最终缩放32倍，输出[B, 1024, H/32, W/32]
+3. 从下到上执行特征上采样，增大空间尺寸，减少通道数目，分别提取三个特征层数据进行预测边界框计算
+    1. [B, 1024, H/32, W/32]
+    2. [B, 512, H/16, W/16]
+    3. [B, 256, H/8, W/8]
+4. 
+"""
+
 
 def add_conv(in_ch, out_ch, ksize, stride):
     """
@@ -132,6 +144,11 @@ def create_yolov3_modules(config_model, ignore_thre):
     # 输入：[N, 1024, 19, 19]
     # 输出：[N, 1024, 19, 19]
     mlist.append(resblock(ch=1024, nblocks=4))
+    #
+    # 图像数据从上到下进行特征提取，最下层输出大小为[N, 1024, 19, 19]，相比较于原始图像输入，进行了32倍的缩放
+    #
+    # 接下来执行从下到上的特征上采样，不断增大特征数据空间尺寸，相对应的减少特征通道维数
+    # [N, 1024, 19, 19] -> [N, 512, 38, 38] -> [N, 256, 76, 76]
 
     # YOLOv3
     # ResBlock，2*2=4个ConvBnAct

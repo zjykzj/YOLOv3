@@ -5,6 +5,8 @@ import os
 import shutil
 import time
 
+from easydict import EasyDict
+
 import torch
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
@@ -27,6 +29,23 @@ import yaml
 from yolo.model.build import build_model
 from yolo.optim.build import build_optimizer
 from yolo.data.build import build_data, build_evaluator
+
+"""
+操作流程：
+
+1. 解析命令行参数 + 配置文件（使用easydict）
+2. 训练配置：
+    1. 初始化模型，加载预训练权重
+    2. 初始化数据类、批量加载器、数据集评估器
+    3. 初始化优化器 + 学习率调度器
+3. 训练：
+    1. 每轮迭代包含subdivision * batchsize个图像
+    2. 每轮计算后，执行梯度更新以及学习率更新
+    3. 每隔10轮计算，打印使用学习率、平均损失以及图像缩放大小
+    4. 每隔10轮重新设置图像缩放大小（32的倍数，取值范围在[320, 608]）
+4. 评估：
+    1. 每隔4000轮评估一次
+"""
 
 
 def to_python_float(t):
@@ -107,9 +126,9 @@ def main():
     with open(args.cfg, 'r') as f:
         # cfg = yaml.load(f)
         cfg = yaml.safe_load(f)
+    cfg = EasyDict(d=cfg)
 
     cudnn.benchmark = True
-    # best_prec1 = 0
     best_ap50_95 = 0
     if args.deterministic:
         cudnn.benchmark = False

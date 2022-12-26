@@ -24,9 +24,13 @@ class YOLOLayer(nn.Module):
         """
 
         super(YOLOLayer, self).__init__()
-        # 特征图相对于
+        # 特征图相对于原始数据的缩放倍数
         strides = [32, 16, 8]  # fixed
         # 预设的锚点框列表，保存了所有的锚点框长宽
+        # 每层使用3个锚点框，共９个预设锚点框
+        #
+        # 对于缩放倍数高的特征图，其锚点框宽高偏小，适用于预测小的边界框
+        # 对于缩放倍数低的特征图，其锚点框宽高偏大，适用于预测大的边界框
         self.anchors = config_model['ANCHORS']
         # 指定不同YOLO层使用的锚点框
         self.anch_mask = config_model['ANCH_MASK'][layer_no]
@@ -36,17 +40,18 @@ class YOLOLayer(nn.Module):
         self.n_classes = config_model['N_CLASSES']
         # 阈值
         self.ignore_thre = ignore_thre
-        # 损失函数，work for ???
+        # 子损失函数
+        # 针对图像宽高，执行均方损失
         self.l2_loss = nn.MSELoss(size_average=False)
+        # 针对目标框置信度以及分类概率，执行二分类交叉熵损失
         self.bce_loss = nn.BCELoss(size_average=False)
         # 第N个YOLO层使用的步长，也就是输入图像大小和使用的特征数据之间的缩放比率
         self.stride = strides[layer_no]
         # 按比例缩放锚点框长／宽
         self.all_anchors_grid = [(w / self.stride, h / self.stride)
                                  for w, h in self.anchors]
-        # 采集指定YOLO使用的锚点
-        self.masked_anchors = [self.all_anchors_grid[i]
-                               for i in self.anch_mask]
+        # 采集指定YOLO层使用的锚点
+        self.masked_anchors = [self.all_anchors_grid[i] for i in self.anch_mask]
         self.ref_anchors = np.zeros((len(self.all_anchors_grid), 4))
         self.ref_anchors[:, 2:] = np.array(self.all_anchors_grid)
         self.ref_anchors = torch.FloatTensor(self.ref_anchors)
