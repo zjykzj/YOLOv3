@@ -34,3 +34,5 @@ Fix:
     RuntimeError: cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input #32564
     https://github.com/pytorch/pytorch/issues/32564#issuecomment-633739690
 ```
+
+YOLOv3和YOLOv7应该是一样的操作步骤，唯一的差别在于模型的提取
