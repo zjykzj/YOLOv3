@@ -88,6 +88,7 @@ def postprocess(prediction, num_classes, conf_thre=0.7, nms_thre=0.45):
 
     """
     # 输入prediction: [B, N_bbox, 4+1+80]
+    # [x_center, y_center, box_w, box_h] -> [x_topleft, y_topleft, x_rightbottom, y_rightbottom]
     box_corner = prediction.new(prediction.shape)
     # 计算左上角坐标x0 = x_c - w/2
     box_corner[:, :, 0] = prediction[:, :, 0] - prediction[:, :, 2] / 2
@@ -110,6 +111,7 @@ def postprocess(prediction, num_classes, conf_thre=0.7, nms_thre=0.45):
         class_pred = class_pred[0]
         # 置信度掩码 [N_bbox] -> [N_bbox]
         # Pr(Class_i | Object) * Pr(Object) = Pr(Class_i)
+        # 类别概率 * 置信度 = 置信度
         conf_mask = (image_pred[:, 4] * class_pred >= conf_thre)
         conf_mask = conf_mask.squeeze()
         # 过滤不符合置信度阈值的预测框
@@ -125,23 +127,30 @@ def postprocess(prediction, num_classes, conf_thre=0.7, nms_thre=0.45):
         # N_nonzero表示二维矩阵[N_bbox, 80]中每一行不为0的数目
         # [N_nonzero, 0]表示行下标
         # [N_nonzero, 1]表示列下标
+        # 也就是说，计算每个预测框对应的置信度大于置信度阈值的类别有多少
         ind = (image_pred[:, 5:] * image_pred[:, 4][:, None] >= conf_thre).nonzero()
         # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
         # 获取预测结果
-        # image_pred[ind[:, 0], :5]: 每个预测框的预测坐标 + 置信度
-        # image_pred[ind[:, 0], 5 + ind[:, 1]].unsqueeze(1): 每个预测框的分类概率
-        # ind[:, 1].float().unsqueeze(1): 每个预测框的分类下标
+        # image_pred[ind[:, 0], :5]: 选择置信度大于等于阈值的预测框，得到预测框的预测坐标 + 置信度
+        # image_pred[ind[:, 0], 5 + ind[:, 1]].unsqueeze(1): 选择置信度大于等于阈值的预测框，得到每个预测框的分类概率
+        # ind[:, 1].float().unsqueeze(1): 选择置信度大于等于阈值的预测框，得到预测框的分类下标
+        # [N_ind, 5] + [N_ind, 1] + [N_ind, 1] = [N_ind, 7]
         detections = torch.cat((
             image_pred[ind[:, 0], :5],
             image_pred[ind[:, 0], 5 + ind[:, 1]].unsqueeze(1),
             ind[:, 1].float().unsqueeze(1)
         ), 1)
         # Iterate through all predicted classes
+        # 按照类别进行NMS阈值过滤
+        #
         # 统计所有预测框对应的类别列表
+        # detections[:, -1]：得到预测框的分类下标
+        # .unique()：去除重复的分类下标
         unique_labels = detections[:, -1].cpu().unique()
         if prediction.is_cuda:
             unique_labels = unique_labels.cuda()
         for c in unique_labels:
+            # 逐个类别进行NMS过滤
             # 计算特定类别的预测框
             # Get the detections with the particular class
             # 获取特定类别的预测框列表
@@ -155,12 +164,17 @@ def postprocess(prediction, num_classes, conf_thre=0.7, nms_thre=0.45):
             #   属于该类别的置信度
             nms_out_index = nms(
                 nms_in[:, :4], nms_thre, score=nms_in[:, 4] * nms_in[:, 5])
+
+            # 获取过滤后的预测框
             detections_class = detections_class[nms_out_index]
             if output[i] is None:
+                # 第i张图片的预测结果为None，直接赋值
                 output[i] = detections_class
             else:
+                # 第i张图片的预测结果不为None，连接操作
                 output[i] = torch.cat((output[i], detections_class))
 
+    # 返回所有图片的预测框
     return output
 
 
@@ -261,12 +275,18 @@ def yolobox2label(box, info_img):
         label (list): box data with the format of [y1, x1, y2, x2]
             in the coordinate system of the input image.
     """
+    # (原始高，原始宽，缩放后高，缩放后宽，ROI区域左上角x0，ROI区域左上角y0)
     h, w, nh, nw, dx, dy = info_img
+    # 预测框左上角和右下角坐标
     y1, x1, y2, x2 = box
+    # 计算预测框高，缩放到原始图像
     box_h = ((y2 - y1) / nh) * h
+    # 计算预测框宽，缩放到原始图像
     box_w = ((x2 - x1) / nw) * w
+    # 预测框左上角坐标，先将坐标系恢复到缩放后图像，然后缩放到原始图像
     y1 = ((y1 - dy) / nh) * h
     x1 = ((x1 - dx) / nw) * w
+    # [左上角y1，左上角x1，右下角y2，右下角x2]
     label = [y1, x1, y1 + box_h, x1 + box_w]
     return label
 
@@ -297,7 +317,7 @@ def preprocess(img, imgsize, jitter, random_placing=False):
     assert img is not None
 
     if jitter > 0:
-        # 图像抖动
+        # 图像抖动，作用于训练阶段，在测试阶段不执行
         # add jitter
         # 结果宽 = 抖动因子 * 原图像宽
         dw = jitter * w
@@ -315,14 +335,16 @@ def preprocess(img, imgsize, jitter, random_placing=False):
         #
         # 设置高为目标大小
         nh = imgsize
-        # 等比例缩放宽
+        # 等比例缩放宽，这个时候缩放后的宽是小于目标大小的。也就是说
+        # nw < nh = imgsize
         nw = nh * new_ar
     else:
         # 宽大于等于高
         #
         # 设置宽为目标大小
         nw = imgsize
-        # 等比例缩放高
+        # 等比例缩放高，这个时候缩放后的高是大于目标大小的。也就是说
+        # nh < nw = imgsize
         nh = nw / new_ar
     nw, nh = int(nw), int(nh)
 
