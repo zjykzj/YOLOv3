@@ -1,6 +1,5 @@
 from __future__ import division
 
-
 import argparse
 import yaml
 
@@ -58,6 +57,7 @@ def main():
     # 阈值
     ignore_thre = cfg['TRAIN']['IGNORETHRE']
     # Initiate model
+    # YOLOv3还是通过模型定义方式获取YOLO模型！！！
     model = YOLOv3(cfg['MODEL'], ignore_thre=ignore_thre)
 
     # 预训练权重加载，共两种方式
@@ -79,7 +79,12 @@ def main():
         print("using cuda")
         model = model.cuda()
 
-    # COCO评估器
+    # COCO评估器，指定
+    # 1. 模型类型，对于YOLO，需要转换边界框坐标格式
+    # 2. 数据集路径，默认'COCO/'
+    # 3. 测试图像大小：YOLOv3采用416
+    # 4. 置信度阈值：YOLOv3采用0.8
+    # 5. NMS阈值：YOLOv3采用0.45
     evaluator = COCOAPIEvaluator(model_type=cfg['MODEL']['TYPE'],
                                  data_dir='COCO/',
                                  img_size=cfg['TEST']['IMGSIZE'],

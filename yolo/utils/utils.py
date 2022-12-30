@@ -223,7 +223,7 @@ def bboxes_iou(bboxes_a, bboxes_b, xyxy=True):
     return area_i / (area_a[:, None] + area_b - area_i)
 
 
-def label2yolobox(labels, info_img, maxsize, lrflip):
+def label2yolobox(labels, info_img, maxsize):
     """
     Transform coco labels to yolo box labels
     Args:
@@ -238,7 +238,6 @@ def label2yolobox(labels, info_img, maxsize, lrflip):
             nh, nw (int): shape of the resized image without padding
             dx, dy (int): pad size
         maxsize (int): target image size after pre-processing
-        lrflip (bool): horizontal flip flag
 
     Returns:
         labels:label data whose size is :math:`(N, 5)`.
@@ -256,8 +255,6 @@ def label2yolobox(labels, info_img, maxsize, lrflip):
     labels[:, 2] = (((y1 + y2) / 2) * nh + dy) / maxsize
     labels[:, 3] *= nw / w / maxsize
     labels[:, 4] *= nh / h / maxsize
-    if lrflip:
-        labels[:, 1] = 1 - labels[:, 1]
     return labels
 
 
@@ -291,7 +288,7 @@ def yolobox2label(box, info_img):
     return label
 
 
-def preprocess(img, imgsize, jitter, random_placing=False):
+def preprocess(img, imgsize):
     """
     Image preprocess for yolo input
     Pad the shorter side of the image and resize to (imgsize, imgsize)
@@ -299,8 +296,6 @@ def preprocess(img, imgsize, jitter, random_placing=False):
         img (numpy.ndarray): input image whose shape is :math:`(H, W, C)`.
             Values range from 0 to 255.
         imgsize (int): target image size after pre-processing
-        jitter (float): amplitude of jitter for resizing
-        random_placing (bool): if True, place the image at random position
 
     Returns:
         img (numpy.ndarray): input image whose shape is :math:`(C, imgsize, imgsize)`.
@@ -316,19 +311,8 @@ def preprocess(img, imgsize, jitter, random_placing=False):
     img = img[:, :, ::-1]
     assert img is not None
 
-    if jitter > 0:
-        # 图像抖动，作用于训练阶段，在测试阶段不执行
-        # add jitter
-        # 结果宽 = 抖动因子 * 原图像宽
-        dw = jitter * w
-        # 结果高 = 抖动因子 * 原图像高
-        dh = jitter * h
-        # 宽和高的比率
-        new_ar = (w + np.random.uniform(low=-dw, high=dw)) \
-                 / (h + np.random.uniform(low=-dh, high=dh))
-    else:
-        # 宽和高的比率
-        new_ar = w / h
+    # 宽和高的比率
+    new_ar = w / h
 
     if new_ar < 1:
         # 高比宽大
@@ -348,14 +332,9 @@ def preprocess(img, imgsize, jitter, random_placing=False):
         nh = nw / new_ar
     nw, nh = int(nw), int(nh)
 
-    if random_placing:
-        # 上／下或者左／右随机位置进行填充
-        dx = int(np.random.uniform(imgsize - nw))
-        dy = int(np.random.uniform(imgsize - nh))
-    else:
-        # 上／下或者左／右等比例填充
-        dx = (imgsize - nw) // 2
-        dy = (imgsize - nh) // 2
+    # 上／下或者左／右等比例填充
+    dx = (imgsize - nw) // 2
+    dy = (imgsize - nh) // 2
 
     # 首先将图像缩放到指定大小
     img = cv2.resize(img, (nw, nh))
