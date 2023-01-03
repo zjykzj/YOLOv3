@@ -11,7 +11,8 @@ import math
 import torch
 from torch import nn
 
-from yolo.model.yolo_layer import YOLOLayer
+# from yolo.model.yolo_layer import YOLOLayer
+from yololayer import YOLOLayer
 
 
 class ConvBNAct(nn.Module):
@@ -147,20 +148,20 @@ class Neck(nn.Module):
 
 class Head(nn.Module):
 
-    def __init__(self, config_model, ignore_thresh=0.70):
+    def __init__(self, config_model):
         super(Head, self).__init__()
         self.yolo1 = nn.Sequential(
             ConvBNAct(in_ch=512, out_ch=1024, kernel_size=3, stride=1),
-            YOLOLayer(config_model, layer_no=0, in_ch=1024, ignore_thre=ignore_thresh)
+            YOLOLayer(config_model, layer_no=0, in_ch=1024)
         )
         self.yolo2 = nn.Sequential(
             ConvBNAct(in_ch=256, out_ch=512, kernel_size=3, stride=1),
-            YOLOLayer(config_model, layer_no=1, in_ch=512, ignore_thre=ignore_thresh)
+            YOLOLayer(config_model, layer_no=1, in_ch=512)
         )
         self.yolo3 = nn.Sequential(
             ConvBNAct(in_ch=128, out_ch=256, kernel_size=3, stride=1),
             ResBlock(ch=256, num_blocks=2, shortcut=False),
-            YOLOLayer(config_model, layer_no=2, in_ch=256, ignore_thre=ignore_thresh)
+            YOLOLayer(config_model, layer_no=2, in_ch=256)
         )
 
     def forward(self, x1, x2, x3):
@@ -178,13 +179,13 @@ class Head(nn.Module):
 
 class YOLOv3(nn.Module):
 
-    def __init__(self, config_model, ignore_thresh=0.7):
+    def __init__(self, config_model):
         super(YOLOv3, self).__init__()
         assert config_model['TYPE'] == 'YOLOv3'
 
         self.backbone = Backbone()
         self.neck = Neck()
-        self.head = Head(config_model, ignore_thresh=ignore_thresh)
+        self.head = Head(config_model)
 
         self._init()
 
@@ -207,9 +208,6 @@ class YOLOv3(nn.Module):
         # x1: [B, 256, H/8, W/8]
         # x2: [B, 512, H/16, W/16]
         # x3: [B, 1024, H/32, W/32]
-        print(x1.reshape(-1)[:5])
-        print(x2.reshape(-1)[:5])
-        print(x3.reshape(-1)[:5])
         x1, x2, x3 = self.neck(x3, x2, x1)
         # x1: [B, 512, H/32, W/32]
         # x2: [B, 256, H/16, W/16]
