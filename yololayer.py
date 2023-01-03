@@ -43,9 +43,10 @@ class YOLOLayer(nn.Module):
         预测框坐标b_w/b_h分别进行指数运算后乘以锚点框宽高w_anchors/h_anchors
             b_w: exp([B, 锚点框数量, F_H, F_W, 2]) * [B, n_anchors, F_H, F_W]
             b_h: exp([B, 锚点框数量, F_H, F_W, 3]) * [B, n_anchors, F_H, F_W]
+    4. 计算实际的预测框坐标
         坐标转换, 将预测框坐标转换回原始图像大小
             [B, 锚点框数量, F_H, F_W, :4] * 输入特征相对于原始图像空间尺寸的缩放倍数
-    4. 返回所有网格计算得到的预测框坐标
+        整理所有网格计算得到的预测框坐标
         [B, n_anchors, F_H, F_W, n_ch] -> [B, n_anchors * F_H * F_W, n_ch]
     """
 
@@ -129,9 +130,12 @@ class YOLOLayer(nn.Module):
         # b_h = exp(t_h) * p_h
         pred[..., 3] = torch.exp(pred[..., 3]) * h_anchors
 
-        # 推理阶段，不计算损失
-        # 将预测框坐标按比例返回到原图大小
-        pred[..., :4] *= self.stride
-        # [B, n_anchors, F_H, F_W, n_ch] -> [B, n_anchors * F_H * F_W, n_ch]
-        # return pred.view(batchsize, -1, n_ch).data
-        return pred.reshape(batchsize, -1, n_ch).data
+        if self.training:
+            # 推理阶段，不计算损失
+            # 将预测框坐标按比例返回到原图大小
+            pred[..., :4] *= self.stride
+            # [B, n_anchors, F_H, F_W, n_ch] -> [B, n_anchors * F_H * F_W, n_ch]
+            # return pred.view(batchsize, -1, n_ch).data
+            return pred.reshape(batchsize, -1, n_ch).data
+        else:
+            return pred[..., :4]
