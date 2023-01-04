@@ -17,7 +17,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-def label2yolobox(labels, info_img, maxsize):
+def label2yolobox(labels, info_img):
     """
     Transform coco labels to yolo box labels
     Args:
@@ -41,18 +41,22 @@ def label2yolobox(labels, info_img, maxsize):
                 xc, yc (float) : center of bbox whose values range from 0 to 1.
                 w, h (float) : size of bbox whose values range from 0 to 1.
     """
-    h, w, nh, nw, dx, dy = info_img
-    # xyxy -> xywh，然后基于原始图像大小计算比率
-    x1 = labels[:, 1] / w
-    y1 = labels[:, 2] / h
-    x2 = (labels[:, 1] + labels[:, 3]) / w
-    y2 = (labels[:, 2] + labels[:, 4]) / h
+    src_h, src_w, dst_h, dst_w = info_img
+    # xywh -> xyxy
+    x1 = labels[:, 1]
+    y1 = labels[:, 2]
+    x2 = (labels[:, 1] + labels[:, 3])
+    y2 = (labels[:, 2] + labels[:, 4])
 
-    # 转换成目标
-    labels[:, 1] = (((x1 + x2) / 2) * nw + dx) / maxsize
-    labels[:, 2] = (((y1 + y2) / 2) * nh + dy) / maxsize
-    labels[:, 3] *= nw / w / maxsize
-    labels[:, 4] *= nh / h / maxsize
+    # 计算目标图像对应边界框坐标以及宽高，计算相对比率
+    # x_center, y_center, b_w, b_h
+    #
+    # dst_x / src_x = dst_w / src_w
+    # dst_x = src_x * dst_w / src_w
+    labels[:, 1] = ((x1 + x2) / 2) * dst_w / src_w
+    labels[:, 2] = ((y1 + y2) / 2) * dst_h / src_h
+    labels[:, 3] *= dst_w / src_w
+    labels[:, 4] *= dst_h / dst_h
     return labels
 
 
@@ -89,7 +93,9 @@ class COCODataset(Dataset):
         img_id = self.ids[index]
         img_file = os.path.join(self.root, 'images', self.name, '{:012}'.format(img_id) + '.jpg')
         img = cv2.imread(img_file)
+        src_h, src_w = img.shape[:2]
         img = cv2.resize(img, (self.img_size, self.img_size))
+        info_img = [src_h, src_w, self.img_size, self.img_size]
 
         # load labels
         anno_ids = self.coco.getAnnIds(imgIds=[int(img_id)], iscrowd=None)
@@ -98,25 +104,27 @@ class COCODataset(Dataset):
         labels = []
         for anno in annotations:
             if anno['bbox'][2] > self.min_size and anno['bbox'][3] > self.min_size:
-                labels.append([self.class_ids.index(anno['category_id']), anno['bbox']])
+                tmp_label = [anno['category_id']]
+                tmp_label.extend(anno['bbox'])
+                labels.insert(0, tmp_label)
 
         padded_labels = np.zeros((self.max_labels, 5))
         if len(labels) > 0:
             labels = np.stack(labels)
             if 'YOLO' in self.model_type:
-                labels = label2yolobox(labels, info_img, self.img_size)
-            padded_labels[range(len(labels))[:self.max_labels]
-            ] = labels[:self.max_labels]
+                labels = label2yolobox(labels, info_img)
+            padded_labels[range(len(labels))[:self.max_labels]] = labels[:self.max_labels]
         padded_labels = torch.from_numpy(padded_labels)
 
-        return img, labels
+        return img, padded_labels, labels, info_img
 
 
 if __name__ == '__main__':
     # dataset = COCODataset("COCO", name='train2017', img_size=416)
     dataset = COCODataset("COCO", name='val2017', img_size=416)
 
-    img, labels = dataset.__getitem__(333)
+    img, padded_labels, labels, info_img = dataset.__getitem__(333)
     print(img.shape)
     print(len(labels))
     print(labels)
+    print(padded_labels)

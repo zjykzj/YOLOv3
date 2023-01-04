@@ -131,11 +131,11 @@ class YOLOLayer(nn.Module):
         pred[..., 3] = torch.exp(pred[..., 3]) * h_anchors
 
         if self.training:
+            return pred[..., :4]
+        else:
             # 推理阶段，不计算损失
             # 将预测框坐标按比例返回到原图大小
             pred[..., :4] *= self.stride
             # [B, n_anchors, F_H, F_W, n_ch] -> [B, n_anchors * F_H * F_W, n_ch]
             # return pred.view(batchsize, -1, n_ch).data
             return pred.reshape(batchsize, -1, n_ch).data
-        else:
-            return pred[..., :4]
