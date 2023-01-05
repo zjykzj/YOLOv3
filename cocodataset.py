@@ -96,16 +96,17 @@ def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0):
     padded_img = np.zeros((dst_size, dst_size, 3), dtype=np.uint8) * 127
     padded_img[dy:dy + dst_h, dx:dx + dst_w, :] = resized_img
 
-    # 进行缩放以及填充后需要相应的修改坐标位置
-    # x_left_top
-    bboxes[:, 0] = bboxes[:, 0] / src_w * dst_w + dx
-    # y_left_top
-    bboxes[:, 1] = bboxes[:, 1] / src_h * dst_h + dy
-    # 对于宽/高而言，仅需缩放对应比例即可，不需要增加填充坐标
-    # box_w
-    bboxes[:, 2] = bboxes[:, 2] / src_w * dst_w
-    # box_h
-    bboxes[:, 3] = bboxes[:, 3] / src_h * dst_h
+    if len(bboxes) > 0:
+        # 进行缩放以及填充后需要相应的修改坐标位置
+        # x_left_top
+        bboxes[:, 0] = bboxes[:, 0] / src_w * dst_w + dx
+        # y_left_top
+        bboxes[:, 1] = bboxes[:, 1] / src_h * dst_h + dy
+        # 对于宽/高而言，仅需缩放对应比例即可，不需要增加填充坐标
+        # box_w
+        bboxes[:, 2] = bboxes[:, 2] / src_w * dst_w
+        # box_h
+        bboxes[:, 3] = bboxes[:, 3] / src_h * dst_h
 
     img_info = [src_h, src_w, dst_h, dst_w, dst_size, dx, dy]
     return padded_img, bboxes, img_info
@@ -114,11 +115,12 @@ def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0):
 def left_right_flip(img, bboxes):
     dst_img = np.flip(img, axis=2).copy()
 
-    h, w = img.shape[:2]
-    # 左右翻转，所以宽/高不变，变换左上角坐标(x1, y1)和右上角坐标(x2, y1)进行替换
-    x2 = bboxes[:, 0] + bboxes[:, 2]
-    # y1/2/h不变，仅变换x1 = w - x2
-    bboxes[:, 0] = w - x2
+    if len(bboxes) > 0:
+        h, w = img.shape[:2]
+        # 左右翻转，所以宽/高不变，变换左上角坐标(x1, y1)和右上角坐标(x2, y1)进行替换
+        x2 = bboxes[:, 0] + bboxes[:, 2]
+        # y1/2/h不变，仅变换x1 = w - x2
+        bboxes[:, 0] = w - x2
 
     return dst_img, bboxes
 
@@ -286,17 +288,23 @@ class COCODataset(Dataset):
                 # bbox: [x, y, w, h]
                 tmp_label.extend(anno['bbox'])
                 labels.insert(0, tmp_label)
-        labels = np.stack(labels)
+        labels = np.array(labels)
 
         # 读取图像
         img = cv2.imread(img_file)
         # 图像预处理
-        img, bboxes, img_info = self.preprocess(img, labels[:, 1:])
-        labels[:, 1:] = bboxes
-        assert isinstance(img_info, list)
-        img_info.append(img_id)
-        img_info.append(index)
-        assert np.all(bboxes < self.img_size), print(img_info, '\n', bboxes)
+        if len(labels) > 0:
+            img, bboxes, img_info = self.preprocess(img, labels[:, 1:])
+            labels[:, 1:] = bboxes
+            assert isinstance(img_info, list)
+            img_info.append(img_id)
+            img_info.append(index)
+            assert np.all(bboxes < self.img_size), print(img_info, '\n', bboxes)
+        else:
+            img, bboxes, img_info = self.preprocess(img, labels)
+            assert isinstance(img_info, list)
+            img_info.append(img_id)
+            img_info.append(index)
         # 数据预处理
         img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
 
@@ -327,7 +335,8 @@ if __name__ == '__main__':
 
     # img, target = dataset.__getitem__(333)
     # img, target = dataset.__getitem__(57756)
-    img, target = dataset.__getitem__(87564)
+    # img, target = dataset.__getitem__(87564)
+    img, target = dataset.__getitem__(51264)
     print(img.shape)
     padded_labels = target['padded_labels']
     img_info = target['img_info']
