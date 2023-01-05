@@ -100,12 +100,12 @@ def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0):
     # x_left_top
     bboxes[:, 0] = bboxes[:, 0] / src_w * dst_w + dx
     # y_left_top
-    bboxes[:, 1] = bboxes[:, 1] / src_h * dst_w + dy
+    bboxes[:, 1] = bboxes[:, 1] / src_h * dst_h + dy
     # 对于宽/高而言，仅需缩放对应比例即可，不需要增加填充坐标
     # box_w
     bboxes[:, 2] = bboxes[:, 2] / src_w * dst_w
     # box_h
-    bboxes[:, 3] = bboxes[:, 3] / src_h * dst_w
+    bboxes[:, 3] = bboxes[:, 3] / src_h * dst_h
 
     img_info = [src_h, src_w, dst_h, dst_w, dst_size, dx, dy]
     return padded_img, bboxes, img_info
@@ -296,7 +296,7 @@ class COCODataset(Dataset):
         assert isinstance(img_info, list)
         img_info.append(img_id)
         img_info.append(index)
-        assert np.all(bboxes < self.img_size), print(img_info)
+        assert np.all(bboxes < self.img_size), print(img_info, '\n', bboxes)
         # 数据预处理
         img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
 
@@ -306,7 +306,7 @@ class COCODataset(Dataset):
             labels = np.stack(labels)
             if 'YOLO' in self.model_type:
                 labels = label2yolobox(labels)
-                assert np.all(labels < self.img_size), print(img_info)
+                assert np.all(labels < self.img_size), print(img_info, '\n', labels)
             padded_labels[range(len(labels))[:self.max_num_labels]] = labels[:self.max_num_labels]
         padded_labels = torch.from_numpy(padded_labels)
 
