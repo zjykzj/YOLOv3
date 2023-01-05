@@ -67,7 +67,7 @@ from torch.utils.data import Dataset
 def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0):
     """
     src_img: [H, W, 3]
-    bboxes: [K, 4] x1/y1/x2/y2
+    bboxes: [K, 4] x1/y1/b_w/b_h
     """
     src_h, src_w = src_img.shape[:2]
 
@@ -101,23 +101,24 @@ def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0):
     bboxes[:, 0] = bboxes[:, 0] / src_w * dst_w + dx
     # y_left_top
     bboxes[:, 1] = bboxes[:, 1] / src_h * dst_w + dy
+    # 对于宽/高而言，仅需缩放对应比例即可，不需要增加填充坐标
     # box_w
-    bboxes[:, 2] = bboxes[:, 2] / src_w * dst_w + dx
+    bboxes[:, 2] = bboxes[:, 2] / src_w * dst_w
     # box_h
-    bboxes[:, 3] = bboxes[:, 3] / src_h * dst_w + dy
+    bboxes[:, 3] = bboxes[:, 3] / src_h * dst_w
 
     img_info = [src_h, src_w, dst_h, dst_w, dst_size, dx, dy]
     return padded_img, bboxes, img_info
 
 
-def left_right_flip(src_img, bboxes):
-    dst_img = np.flip(src_img, axis=2).copy()
+def left_right_flip(img, bboxes):
+    dst_img = np.flip(img, axis=2).copy()
 
-    src_h, src_w = src_img.shape[:2]
-    bboxes[:, 1] = src_w - bboxes[:, 0]
-    bboxes[:, 2] = src_h - bboxes[:, 1]
-    bboxes[:, 3] = src_w - bboxes[:, 2]
-    bboxes[:, 4] = src_h - bboxes[:, 3]
+    h, w = img.shape[:2]
+    # 左右翻转，所以宽/高不变，变换左上角坐标(x1, y1)和右上角坐标(x2, y1)进行替换
+    x2 = bboxes[:, 0] + bboxes[:, 2]
+    # y1/2/h不变，仅变换x1 = w - x2
+    bboxes[:, 0] = w - x2
 
     return dst_img, bboxes
 
@@ -285,7 +286,7 @@ class COCODataset(Dataset):
                 # bbox: [x, y, w, h]
                 tmp_label.extend(anno['bbox'])
                 labels.insert(0, tmp_label)
-        labels = np.array(labels)
+        labels = np.stack(labels)
 
         # 读取图像
         img = cv2.imread(img_file)
@@ -294,6 +295,8 @@ class COCODataset(Dataset):
         labels[:, 1:] = bboxes
         assert isinstance(img_info, list)
         img_info.append(img_id)
+        img_info.append(index)
+        assert np.all(bboxes < self.img_size), print(img_info)
         # 数据预处理
         img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
 
@@ -303,6 +306,7 @@ class COCODataset(Dataset):
             labels = np.stack(labels)
             if 'YOLO' in self.model_type:
                 labels = label2yolobox(labels)
+                assert np.all(labels < self.img_size), print(img_info)
             padded_labels[range(len(labels))[:self.max_num_labels]] = labels[:self.max_num_labels]
         padded_labels = torch.from_numpy(padded_labels)
 
@@ -313,16 +317,20 @@ class COCODataset(Dataset):
             'padded_labels': padded_labels,
             "img_info": img_info
         })
+        print(padded_labels)
         return img, target
 
 
 if __name__ == '__main__':
-    # dataset = COCODataset("COCO", name='train2017', img_size=416)
-    dataset = COCODataset("COCO", name='val2017', img_size=416, is_train=True)
+    dataset = COCODataset("COCO", name='train2017', img_size=608, is_train=True)
+    # dataset = COCODataset("COCO", name='val2017', img_size=416, is_train=False)
 
-    img, target = dataset.__getitem__(333)
+    # img, target = dataset.__getitem__(333)
+    # img, target = dataset.__getitem__(57756)
+    img, target = dataset.__getitem__(87564)
     print(img.shape)
     padded_labels = target['padded_labels']
     img_info = target['img_info']
     print(padded_labels.shape)
     print(img_info)
+    print(padded_labels)

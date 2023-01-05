@@ -371,7 +371,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
     for i, (input, target) in enumerate(train_loader):
         input = input.cuda()
-        target = target.cuda()
+        # target = target.cuda()
         # prefetcher = data_prefetcher(train_loader)
         # input, target = prefetcher.next()
         # i = 0
