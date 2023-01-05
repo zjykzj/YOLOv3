@@ -129,13 +129,13 @@ class YOLOLayer(nn.Module):
         pred[..., 3] = torch.exp(pred[..., 3]) * h_anchors
 
         if self.training:
-            # output: [B, n_anchors*(5+n_classes), F_H, F_W]
-            # 5 = xywh+conf
-            # pred[..., :4]: [B, n_anchors, F_H, F_W, 4]
-            # 4 = xywh
             res = dict({
                 'layer_no': self.layer_no,
+                # output: [B, n_anchors*(5+n_classes), F_H, F_W]
+                # 5 = xywh+conf
                 'output': output,
+                # pred[..., :4]: [B, n_anchors, F_H, F_W, 4]
+                # 4 = xywh
                 'pred': pred[..., :4]
             })
             return res
