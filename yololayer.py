@@ -57,6 +57,7 @@ class YOLOLayer(nn.Module):
         strides = [32, 16, 8]
         # 当前YOLOLayer使用的缩放倍数
         self.stride = strides[layer_no]
+        self.layer_no = layer_no
 
         # 预定义的所有锚点框
         self.anchors = config_model['ANCHORS']
@@ -74,9 +75,6 @@ class YOLOLayer(nn.Module):
         self.conv = nn.Conv2d(in_channels=in_ch,
                               out_channels=self.n_anchors * (self.n_classes + 5),
                               kernel_size=(1, 1), stride=(1, 1), padding=0)
-        self.ref_anchors = np.zeros((len(self.all_anchors_grid), 4))
-        self.ref_anchors[:, 2:] = np.array(self.all_anchors_grid)
-        self.ref_anchors = torch.FloatTensor(self.ref_anchors)
 
     def forward(self, x):
         output = self.conv(x)
@@ -131,11 +129,20 @@ class YOLOLayer(nn.Module):
         pred[..., 3] = torch.exp(pred[..., 3]) * h_anchors
 
         if self.training:
-            return pred[..., :4]
+            # output: [B, n_anchors*(5+n_classes), F_H, F_W]
+            # 5 = xywh+conf
+            # pred[..., :4]: [B, n_anchors, F_H, F_W, 4]
+            # 4 = xywh
+            res = dict({
+                'layer_no': self.layer_no,
+                'output': output,
+                'pred': pred[..., :4]
+            })
+            return res
         else:
             # 推理阶段，不计算损失
             # 将预测框坐标按比例返回到原图大小
             pred[..., :4] *= self.stride
             # [B, n_anchors, F_H, F_W, n_ch] -> [B, n_anchors * F_H * F_W, n_ch]
             # return pred.view(batchsize, -1, n_ch).data
-            return pred.reshape(batchsize, -1, n_ch).data
+            return pred.reshape(batchsize, -1, n_ch)

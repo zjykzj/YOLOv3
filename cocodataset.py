@@ -43,20 +43,24 @@ def label2yolobox(labels, info_img):
     """
     src_h, src_w, dst_h, dst_w = info_img
     # xywh -> xyxy
-    x1 = labels[:, 1]
-    y1 = labels[:, 2]
-    x2 = (labels[:, 1] + labels[:, 3])
-    y2 = (labels[:, 2] + labels[:, 4])
+    x1 = labels[:, 1] / src_w
+    y1 = labels[:, 2] / src_h
+    x2 = (labels[:, 1] + labels[:, 3]) / src_w
+    y2 = (labels[:, 2] + labels[:, 4]) / src_h
 
     # 计算目标图像对应边界框坐标以及宽高，计算相对比率
     # x_center, y_center, b_w, b_h
     #
     # dst_x / src_x = dst_w / src_w
     # dst_x = src_x * dst_w / src_w
-    labels[:, 1] = ((x1 + x2) / 2) * dst_w / src_w
-    labels[:, 2] = ((y1 + y2) / 2) * dst_h / src_h
-    labels[:, 3] *= dst_w / src_w
-    labels[:, 4] *= dst_h / dst_h
+    # labels[:, 1] = ((x1 + x2) / 2) * dst_w / src_w
+    # labels[:, 2] = ((y1 + y2) / 2) * dst_h / src_h
+    # labels[:, 3] *= dst_w / src_w
+    # labels[:, 4] *= dst_h / dst_h
+    labels[:, 1] = ((x1 + x2) / 2)
+    labels[:, 2] = ((y1 + y2) / 2)
+    labels[:, 3] /= src_w
+    labels[:, 4] /= dst_h
     return labels
 
 
@@ -95,6 +99,8 @@ class COCODataset(Dataset):
         img = cv2.imread(img_file)
         src_h, src_w = img.shape[:2]
         img = cv2.resize(img, (self.img_size, self.img_size))
+        img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
+
         info_img = [src_h, src_w, self.img_size, self.img_size]
 
         # load labels
@@ -104,7 +110,7 @@ class COCODataset(Dataset):
         labels = []
         for anno in annotations:
             if anno['bbox'][2] > self.min_size and anno['bbox'][3] > self.min_size:
-                tmp_label = [anno['category_id']]
+                tmp_label = [self.class_ids.index(anno['category_id'])]
                 tmp_label.extend(anno['bbox'])
                 labels.insert(0, tmp_label)
 
@@ -116,7 +122,10 @@ class COCODataset(Dataset):
             padded_labels[range(len(labels))[:self.max_labels]] = labels[:self.max_labels]
         padded_labels = torch.from_numpy(padded_labels)
 
-        return img, padded_labels, labels, info_img
+        # return img, padded_labels, labels, info_img
+        # img: [3, H, W]
+        # padded_labels: [K, 5]
+        return img, padded_labels
 
 
 if __name__ == '__main__':

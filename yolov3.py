@@ -192,14 +192,14 @@ class YOLOv3(nn.Module):
     def _init(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                # nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
                 # nn.init.normal_(m.weight, 0, 0.01)
-                nn.init.constant_(m.weight, 0.01)
+                # nn.init.constant_(m.weight, 0.01)
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
-                # nn.init.normal_(m.weight, 0, 0.01)
-                nn.init.constant_(m.weight, 0.01)
+                nn.init.normal_(m.weight, 0, 0.01)
+                # nn.init.constant_(m.weight, 0.01)
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
@@ -219,7 +219,10 @@ class YOLOv3(nn.Module):
 
         # res: [B, (H*W + 2H*2W + 4H*4W) / (32*32) * 3, 85]
         #     =[B, H*W*63 / (32*32), 85
-        return torch.cat((x1, x2, x3), 1)
+        if self.training:
+            return [x1, x2, x3]
+        else:
+            return torch.cat((x1, x2, x3), 1)
 
 
 if __name__ == '__main__':
