@@ -383,7 +383,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         if args.prof >= 0: torch.cuda.nvtx.range_push("Body of iteration {}".format(i))
 
-        adjust_learning_rate(optimizer, epoch, i, len(train_loader))
+        current_lr = adjust_learning_rate(optimizer, epoch, i, len(train_loader))
 
         # compute output
         if args.prof >= 0: torch.cuda.nvtx.range_push("forward")
@@ -435,10 +435,12 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 print('Epoch: [{0}][{1}/{2}]\t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Speed {3:.3f} ({4:.3f})\t'
+                      'Lr {5:.8f}\t'
                       'Loss {loss.val:.10f} ({loss.avg:.4f})\t'.format(
                     epoch, i, len(train_loader),
                     args.world_size * args.batch_size / batch_time.val,
                     args.world_size * args.batch_size / batch_time.avg,
+                    current_lr,
                     batch_time=batch_time,
                     loss=losses))
                 # print('Epoch: [{0}][{1}/{2}]\t'
@@ -570,6 +572,8 @@ def adjust_learning_rate(optimizer, epoch, step, len_epoch):
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
+    return lr
 
 
 def accuracy(output, target, topk=(1,)):
