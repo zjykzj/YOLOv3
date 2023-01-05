@@ -296,15 +296,12 @@ class COCODataset(Dataset):
         if len(labels) > 0:
             img, bboxes, img_info = self.preprocess(img, labels[:, 1:])
             labels[:, 1:] = bboxes
-            assert isinstance(img_info, list)
-            img_info.append(img_id)
-            img_info.append(index)
-            assert np.all(bboxes < self.img_size), print(img_info, '\n', bboxes)
         else:
             img, bboxes, img_info = self.preprocess(img, labels)
-            assert isinstance(img_info, list)
-            img_info.append(img_id)
-            img_info.append(index)
+        assert isinstance(img_info, list)
+        img_info.append(img_id)
+        img_info.append(index)
+        assert np.all(bboxes <= self.img_size), print(img_info, '\n', bboxes)
         # 数据预处理
         img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
 
@@ -314,7 +311,7 @@ class COCODataset(Dataset):
             labels = np.stack(labels)
             if 'YOLO' in self.model_type:
                 labels = label2yolobox(labels)
-                assert np.all(labels < self.img_size), print(img_info, '\n', labels)
+                assert np.all(labels <= self.img_size), print(img_info, '\n', labels)
             padded_labels[range(len(labels))[:self.max_num_labels]] = labels[:self.max_num_labels]
         padded_labels = torch.from_numpy(padded_labels)
 
