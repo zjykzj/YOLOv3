@@ -220,7 +220,7 @@ def main():
 
     from cocodataset import COCODataset
     train_dataset = COCODataset('COCO', name='train2017', img_size=608)
-    val_dataset = COCODataset('COCO', name='val2017', img_size=416)
+    # val_dataset = COCODataset('COCO', name='val2017', img_size=416)
     # train_dataset = datasets.ImageFolder(
     #     traindir,
     #     transforms.Compose([
@@ -233,12 +233,25 @@ def main():
     #     transforms.Resize(val_size),
     #     transforms.CenterCrop(crop_size),
     # ]))
+    from yolo.utils.cocoapi_evaluator import COCOAPIEvaluator
+
+    # COCO评估器，指定
+    # 1. 模型类型，对于YOLO，需要转换边界框坐标格式
+    # 2. 数据集路径，默认'COCO/'
+    # 3. 测试图像大小：YOLOv3采用416
+    # 4. 置信度阈值：YOLOv3采用0.8
+    # 5. NMS阈值：YOLOv3采用0.45
+    evaluator = COCOAPIEvaluator(model_type=cfg['MODEL']['TYPE'],
+                                 data_dir='COCO/',
+                                 img_size=cfg['TEST']['IMGSIZE'],
+                                 confthre=cfg['TEST']['CONFTHRE'],
+                                 nmsthre=cfg['TEST']['NMSTHRE'])
 
     train_sampler = None
-    val_sampler = None
+    # val_sampler = None
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
+        # val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
 
     # collate_fn = lambda b: fast_collate(b, memory_format)
     collate_fn = torch.utils.data.default_collate
@@ -247,17 +260,22 @@ def main():
         train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler, collate_fn=collate_fn)
 
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=args.batch_size, shuffle=False,
-        num_workers=args.workers, pin_memory=True,
-        sampler=val_sampler,
-        collate_fn=collate_fn)
+    # val_loader = torch.utils.data.DataLoader(
+    #     val_dataset,
+    #     batch_size=args.batch_size, shuffle=False,
+    #     num_workers=args.workers, pin_memory=True,
+    #     sampler=val_sampler,
+    #     collate_fn=collate_fn)
 
-    if args.evaluate:
-        validate(val_loader, model, criterion)
+    if args.evaluate and args.local_rank == 0:
+        print("Begin evaluating ...")
+        ap50_95, ap50 = evaluator.evaluate(model)
+        # validate(val_loader, model, criterion)
         return
 
+    # pytorch-accurate time
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
@@ -265,20 +283,25 @@ def main():
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch)
 
-        # evaluate on validation set
-        prec1 = validate(val_loader, model, criterion)
-
-        # remember best prec@1 and save checkpoint
         if args.local_rank == 0:
-            is_best = prec1 > best_prec1
-            best_prec1 = max(prec1, best_prec1)
-            save_checkpoint({
-                'epoch': epoch + 1,
-                'arch': args.arch,
-                'state_dict': model.state_dict(),
-                'best_prec1': best_prec1,
-                'optimizer': optimizer.state_dict(),
-            }, is_best)
+            # evaluate on validation set
+            print("Begin evaluating ...")
+            ap50_95, ap50 = evaluator.evaluate(model)
+        # prec1 = validate(val_loader, model, criterion)
+        # pytorch-accurate time
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+        # # remember best prec@1 and save checkpoint
+        # if args.local_rank == 0:
+        #     is_best = prec1 > best_prec1
+        #     best_prec1 = max(prec1, best_prec1)
+        #     save_checkpoint({
+        #         'epoch': epoch + 1,
+        #         'arch': args.arch,
+        #         'state_dict': model.state_dict(),
+        #         'best_prec1': best_prec1,
+        #         'optimizer': optimizer.state_dict(),
+        #     }, is_best)
 
 
 class data_prefetcher():
