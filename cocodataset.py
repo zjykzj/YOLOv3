@@ -322,7 +322,7 @@ class COCODataset(Dataset):
             'padded_labels': padded_labels,
             "img_info": img_info
         })
-        print(padded_labels)
+        # print(padded_labels)
         return img, target
 
 

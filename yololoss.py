@@ -145,8 +145,8 @@ class YOLOLoss(nn.Module):
         """
         assert isinstance(target, dict)
         labels = target['padded_labels'].cuda()
-        print(labels)
-        print("img_info:", target['img_info'])
+        # print(labels)
+        # print("img_info:", target['img_info'])
 
         assert isinstance(outputs, list)
         loss_list = []
@@ -217,8 +217,8 @@ class YOLOLoss(nn.Module):
             # # h: [B, K]
             # truth_h_all = labels[:, :, 4] * fsize
             # xc * fsize：计算实际坐标
-            print(labels[:, :, 1])
-            print(labels[:, :, 2])
+            # print(labels[:, :, 1])
+            # print(labels[:, :, 2])
             truth_x_all = labels[:, :, 1] / self.stride
             # yc: [B, K]
             truth_y_all = labels[:, :, 2] / self.stride
@@ -230,8 +230,8 @@ class YOLOLoss(nn.Module):
             # xc/yc转换成INT16格式i/j
             truth_i_all = truth_x_all.to(torch.int16).numpy()
             truth_j_all = truth_y_all.to(torch.int16).numpy()
-            print(truth_x_all)
-            print(truth_y_all)
+            # print(truth_x_all)
+            # print(truth_y_all)
 
             # 逐图像处理
             for b in range(batchsize):
@@ -306,9 +306,9 @@ class YOLOLoss(nn.Module):
                         i, j = truth_i[ti], truth_j[ti]
                         # 计算第ti个真值标签框最佳匹配的锚点框
                         a = best_n[ti]
-                        print(b, a, j, i, n, ti)
-                        print(truth_i)
-                        print(truth_j)
+                        # print(b, a, j, i, n, ti)
+                        # print(truth_i)
+                        # print(truth_j)
                         # b: 第b张图像
                         # a: 第a个锚点框，对应第a个预测框
                         # j: 第j列网格
