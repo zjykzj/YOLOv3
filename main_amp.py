@@ -2,6 +2,7 @@ import argparse
 import os
 import shutil
 import time
+import random
 
 import torch
 import torch.nn as nn
@@ -67,8 +68,8 @@ def parse():
                         help='Initial learning rate.  Will be scaled by <global batch size>/256: args.lr = args.lr*float(args.batch_size*args.world_size)/64.  A warmup schedule will also be applied over the first 5 epochs.')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                         help='momentum')
-    parser.add_argument('--weight-decay', '--wd', default=1e-5, type=float,
-                        metavar='W', help='weight decay (default: 1e-5)')
+    parser.add_argument('--weight-decay', '--wd', default=5e-4, type=float,
+                        metavar='W', help='weight decay (default: 5e-4)')
     parser.add_argument('--print-freq', '-p', default=10, type=int,
                         metavar='N', help='print frequency (default: 10)')
     parser.add_argument('--resume', default='', type=str, metavar='PATH',
@@ -140,6 +141,8 @@ def main():
 
         cfg = yaml.safe_load(f)
 
+    print("args:", args)
+    print("cfg:", cfg)
     # create model
     from yolov3 import YOLOv3
     model = YOLOv3(cfg['MODEL'])
@@ -158,10 +161,21 @@ def main():
     model = model.cuda().to(memory_format=memory_format)
 
     # Scale learning rate based on global batch size
-    args.lr = args.lr * float(args.batch_size * args.world_size) / 64.
+    # args.lr = args.lr * float(args.batch_size * args.world_size) / 64.
+    args.lr = args.lr / args.batch_size / args.world_size
+    # optimizer setup
+    # set weight decay only on conv.weight
+    # 仅针对卷积层权重执行权重衰减
+    params_dict = dict(model.named_parameters())
+    params = []
+    for key, value in params_dict.items():
+        if 'conv.weight' in key:
+            params += [{'params': value, 'weight_decay': args.weight_decay * args.batch_size * args.world_size}]
+        else:
+            params += [{'params': value, 'weight_decay': 0.0}]
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                 momentum=args.momentum,
-                                weight_decay=args.weight_decay)
+                                weight_decay=args.weight_decay * args.batch_size * args.world_size)
 
     # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
     # for convenient interoperation with argparse.
@@ -369,6 +383,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     model.train()
     end = time.time()
 
+    assert hasattr(train_loader.dataset, 'set_img_size')
     for i, (input, target) in enumerate(train_loader):
         input = input.cuda()
         # target = target.cuda()
@@ -431,16 +446,19 @@ def train(train_loader, model, criterion, optimizer, epoch):
             batch_time.update((time.time() - end) / args.print_freq)
             end = time.time()
 
+            img_size = train_loader.dataset.get_img_size()
             if args.local_rank == 0:
                 print('Epoch: [{0}][{1}/{2}]\t'
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Speed {3:.3f} ({4:.3f})\t'
                       'Lr {5:.8f}\t'
-                      'Loss {loss.val:.10f} ({loss.avg:.4f})\t'.format(
+                      'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
+                      'ImgSize: {6}x{6}\t'.format(
                     epoch, i, len(train_loader),
                     args.world_size * args.batch_size / batch_time.val,
                     args.world_size * args.batch_size / batch_time.avg,
                     current_lr,
+                    img_size,
                     batch_time=batch_time,
                     loss=losses))
                 # print('Epoch: [{0}][{1}/{2}]\t'
@@ -454,6 +472,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 #     args.world_size * args.batch_size / batch_time.avg,
                 #     batch_time=batch_time,
                 #     loss=losses, top1=top1, top5=top5))
+
+            # 每隔10轮都重新指定输入图像大小
+            img_size = (random.randint(0, 9) % 10 + 10) * 32
+            train_loader.dataset.set_img_size(img_size)
         # if args.prof >= 0: torch.cuda.nvtx.range_push("prefetcher.next()")
         # input, target = prefetcher.next()
         # if args.prof >= 0: torch.cuda.nvtx.range_pop()
