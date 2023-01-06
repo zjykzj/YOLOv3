@@ -94,3 +94,19 @@ YOLOv3和YOLOv7应该是一样的操作步骤，唯一的差别在于模型的�
 7. 综合来说，返回2个item:
    1. item1: torch.Tensor格式，预处理后的图像数据
    2. item2: 字典格式，包含了类别下标、预处理后的标注框、图像缩放/填充/抖动前后的大小以及ROI左上角坐标、提取图像列表下标
+
+
+```text
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.077
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.124
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.084
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.010
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.061
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.147
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.072
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.085
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.085
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.010
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.065
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.165
+```
