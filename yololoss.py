@@ -138,12 +138,8 @@ class YOLOLoss(nn.Module):
         # self.ref_anchors = torch.FloatTensor(self.ref_anchors)
 
     def forward(self, outputs, target):
-        """
-        output: [B, n_anchors * (xywh+conf+n_classes), F_H, F_W]
-        pred: [B, n_anchors, F_H, F_W, 4(xywh)]
-        labels: [B, K(每幅图片拥有的真值标签框数目), 5(cls_id + bbox)]
-        """
         assert isinstance(target, dict)
+        # [B, K(每幅图片拥有的真值标签框数目), 5(cls_id + bbox)]
         labels = target['padded_labels'].cuda()
         # print(labels)
         # print("img_info:", target['img_info'])
@@ -151,12 +147,14 @@ class YOLOLoss(nn.Module):
         assert isinstance(outputs, list)
         loss_list = []
         for output_dict in outputs:
+            # 逐图像进行损失计算
             assert isinstance(output_dict, dict)
+            # 获取当前特征层下标
             layer_no = output_dict['layer_no']
-            # 指定不同YOLO层使用的锚点框
+            # 获取当前YOLO层特征数据使用的锚点框
             # [3, 3] -> [3]
             self.anch_mask = self.config_model['ANCH_MASK'][layer_no]
-            # 某一个YOLO层使用的锚点框个数，默认为3
+            # 当前YOLO层特征数据使用的锚点框个数，默认为3
             self.n_anchors = len(self.anch_mask)
 
             # 第N个YOLO层使用的步长，也就是输入图像大小和使用的特征数据之间的缩放比率
@@ -173,35 +171,44 @@ class YOLOLoss(nn.Module):
             self.ref_anchors[:, 2:] = np.array(self.all_anchors_grid)
             self.ref_anchors = torch.FloatTensor(self.ref_anchors)
 
+            # 获取特征层数据 [B, n_anchors * (xywh+conf+n_classes), F_H, F_W]
             output = output_dict['output']
+            # 获取预测边界框　[B, n_anchors, F_H, F_W, 4(xywh)]
             pred = output_dict['pred']
 
+            # 图像批量数目
             batchsize = output.shape[0]
+            # 特征数据的空间尺寸
             fsize = output.shape[2]
 
+            # 特征层最终输出的通道维度大小
             n_ch = 5 + self.n_classes
             assert output.shape[-1] == n_ch
 
+            # 数值类型以及对应设备
             dtype = torch.cuda.FloatTensor if output.is_cuda else torch.FloatTensor
 
             # target assignment
-
+            # 创建掩码，作用母鸡？？？
             # [B, n_anchors, F_H, F_W, 4+n_classes]
             tgt_mask = torch.zeros(batchsize, self.n_anchors,
                                    fsize, fsize, 4 + self.n_classes).type(dtype)
             # [B, n_anchors, F_H, F_W]
+            # 哪个预测框参与计算
             obj_mask = torch.ones(batchsize, self.n_anchors, fsize, fsize).type(dtype)
             # [B, n_anchors, F_H, F_W, 2]
+            # 这个应该是作用于预测框的w/h
             tgt_scale = torch.zeros(batchsize, self.n_anchors, fsize, fsize, 2).type(dtype)
 
             # [B, n_anchors, F_H, F_W, n_ch]
             # n_ch = 4(xywh) + 1(conf) + n_classes
+            # 实际用于损失计算的标签
             target = torch.zeros(batchsize, self.n_anchors, fsize, fsize, n_ch).type(dtype)
 
             labels = labels.cpu().data
             # [N, K, 5] -> [N, K] -> [N]
-            # 首先判断是否存在真值标签框
-            # 然后求和计算每幅图像拥有的目标个数
+            # 计算有效的真值标签框数目
+            # 首先判断是否bbox的xywh有大于0，然后求和计算每幅图像拥有的目标个数
             nlabel = (labels.sum(dim=2) > 0).sum(dim=1)  # number of objects
 
             # xc: [B, K]
@@ -217,8 +224,12 @@ class YOLOLoss(nn.Module):
             # # h: [B, K]
             # truth_h_all = labels[:, :, 4] * fsize
             # xc * fsize：计算实际坐标
+            # xc / stride：真值标签框坐标缩放指定倍数，匹配当前特征数据空间尺寸
             # print(labels[:, :, 1])
             # print(labels[:, :, 2])
+            #
+            # 将真值标签框的坐标映射到缩放后的特征数据中
+            # xc: [B, K]
             truth_x_all = labels[:, :, 1] / self.stride
             # yc: [B, K]
             truth_y_all = labels[:, :, 2] / self.stride
@@ -226,8 +237,7 @@ class YOLOLoss(nn.Module):
             truth_w_all = labels[:, :, 3] / self.stride
             # h: [B, K]
             truth_h_all = labels[:, :, 4] / self.stride
-            # xc / stride：真值标签框坐标缩放指定倍数，匹配当前特征数据空间尺寸
-            # xc/yc转换成INT16格式i/j
+            # xc/yc转换成INT16格式i/j，映射到指定网格中
             truth_i_all = truth_x_all.to(torch.int16).numpy()
             truth_j_all = truth_y_all.to(torch.int16).numpy()
             # print(truth_x_all)
@@ -238,9 +248,9 @@ class YOLOLoss(nn.Module):
                 # 获取该幅图像定义的真值标签框个数
                 n = int(nlabel[b])
                 if n == 0:
-                    # 如果为0，说明该图像没有对应的真值标签框，那么跳过损失计算
+                    # 如果为0，说明该图像没有符合条件的真值标签框，那么跳过损失计算
                     continue
-                # 去除空的边界框，获取真正的边界框坐标
+                # 去除空的边界框，获取真正的标注框坐标
                 truth_box = dtype(np.zeros((n, 4)))
                 # 重新赋值，在数据类定义中，前n个就是真正的真值边界框
                 # 赋值宽和高
@@ -257,17 +267,20 @@ class YOLOLoss(nn.Module):
                 # x_center/y_center/w/h可以看成x_top_left/y_top_left/x_bottom_right/y_bottom_right
                 # 设置xyxy=True，进行IoU计算
                 # ([n, 4], [9, 4]) -> [n, 9]
+                # 计算所有锚点框与真值标注框之间IoU的目的是为了找到真值标注框与哪个锚点框最匹配，
+                # 如果真值标注框与锚点框的最大IoU超过阈值，并且该锚点框作用于该层特征数据，那么该真值标注框对应网格中使用？？？
                 anchor_ious_all = bboxes_iou(truth_box.cpu(), self.ref_anchors, xyxy=True)
-                # 计算每个真值边界框，和它之间的IoU最大的锚点框的下标
+                # 找出和真值边界框之间的IoU最大的锚点框的下标
                 # [n, 9] -> [n]
                 best_n_all = np.argmax(anchor_ious_all, axis=1)
-                # 求余操作，3的余数
+                # 求余操作，3的余数，作用？？？
                 # [n] -> [n]
                 best_n = best_n_all % 3
                 # (best_n_all == self.anch_mask[0]): [n] == 第一个锚点框下标
                 # (beat_n_all == self.anch_mask[1]): [n] == 第二个锚点框下标
                 # (beat_n_all == self.anch_mask[1]): [n] == 第三个锚点框下标
                 # [n] | [n] | [n] = [n]
+                # 计算每个真值标注框最匹配的锚点框作用在当前层特征数据的掩码
                 best_n_mask = ((best_n_all == self.anch_mask[0]) | (
                         best_n_all == self.anch_mask[1]) | (best_n_all == self.anch_mask[2]))
 
@@ -276,22 +289,28 @@ class YOLOLoss(nn.Module):
                 truth_box[:n, 1] = truth_y_all[b, :n]
 
                 # 计算预测框和真值边界框的IoU
-                # ([B*n_anchors*F_H*F_W, 4], [n, 4]) -> [B*n_anchors*F_H*F_W, n]
+                # ([n_anchors*F_H*F_W, 4], [n, 4]) -> [B*n_anchors*F_H*F_W, n]
+                # 预测框坐标：xc/yc是相对于指定网格的比率计算，w/h是相对于特征图空间尺寸的对数运算
+                # 真值标注框：xc/yc是相对于输入模型图像的比率计算，w/h是相对于输入模型图像的比率计算，也就是说，参照物是特征图空间尺寸
                 pred_ious = bboxes_iou(pred[b].reshape(-1, 4), truth_box, xyxy=False)
                 # pred[b].view(-1, 4), truth_box, xyxy=False)
                 # 计算每个预测框与重叠最大的真值标签框的IoU
-                # pred_best_iou: [B*n_anchors*F_H*F_W]
+                # pred_best_iou: [n_anchors*F_H*F_W]
+                # 所有的预测框
                 pred_best_iou, _ = pred_ious.max(dim=1)
-                # 计算掩码，IoU比率要大于忽略阈值。也就是说，如果IoU小于等于忽略阈值，那么该预测框不参与损失计算
-                # pred_best_iou: [B*n_anchors*F_H*F_W]，取值为true/false
+                # 计算掩码，IoU比率要大于忽略阈值。也就是说，如果IoU大于忽略阈值（也就是说预测框坐标与真值标注框坐标非常接近），那么该预测框不参与损失计算
+                # pred_best_iou: [n_anchors*F_H*F_W]，取值为true/false
                 pred_best_iou = (pred_best_iou > self.ignore_thre)
-                # [B*n_anchors*F_H*F_W] -> [B, n_anchors, F_H, F_W]
+                # 改变形状，[n_anchors*F_H*F_W] -> [n_anchors, F_H, F_W]
                 pred_best_iou = pred_best_iou.view(pred[b].shape[:3])
                 # set mask to zero (ignore) if pred matches truth
                 # RuntimeError: Subtraction, the `-` operator, with a bool tensor is not supported. If you are trying to invert a mask, use the `~` or `logical_not()` operator instead.
                 # obj_mask[b] = 1 - pred_best_iou
-                # 目标置信度掩码，等于IoU取逆
+                # 目标掩码，预测框与真值标注框之间的IoU大于忽略阈值的不参与计算
+                # [n_anchors, F_H, F_W]
                 obj_mask[b] = ~pred_best_iou
+                # obj_mask: 取值为True/False
+                # True表示该预测框参与损失计算
 
                 if sum(best_n_mask) == 0:
                     # 如果真值边界框和当前层使用的锚点框之间不存在最佳匹配，那么不计算损失
@@ -302,9 +321,11 @@ class YOLOLoss(nn.Module):
                 for ti in range(best_n.shape[0]):
                     # 该真值标签框是否和本层特征使用的锚点框最佳匹配
                     if best_n_mask[ti] == 1:
-                        # 获取第ti个真值标签框对应的x_center/y_center
+                        # 如果是，那么计算预测框损失
+                        # 获取第ti个真值标签框对应的网格位置
                         i, j = truth_i[ti], truth_j[ti]
-                        # 计算第ti个真值标签框最佳匹配的锚点框
+                        # 该真值标签框最佳匹配的锚点框
+                        # ??? 为什么要这样呢，明明有些锚点框不作用于当前特征层数据
                         a = best_n[ti]
                         # print(b, a, j, i, n, ti)
                         # print(truth_i)
@@ -313,15 +334,21 @@ class YOLOLoss(nn.Module):
                         # a: 第a个锚点框，对应第a个预测框
                         # j: 第j列网格
                         # i: 第i行网格
-                        # 置信度掩码：第[b, a, j, i]个预测框的掩码设置为1，表示参与损失计算
+                        # 目标掩码：第[b, a, j, i]个预测框的掩码设置为1，表示参与损失计算
                         # obj_mask: [B, n_anchors, F_H, F_W]
+                        #
+                        # obj_mask经过了两次设置，
+                        # 1. 第一次设置是计算预测框与真值标签框
                         obj_mask[b, a, j, i] = 1
                         # 坐标以及分类掩码：因为采用多标签训练方式，实际损失计算采用二元逻辑回归损失
                         # tgt_mask: [B, n_anchors, F_H, F_W, 4+n_classes]
                         tgt_mask[b, a, j, i, :] = 1
                         # target: [B, n_anchors, F_H, F_W, n_ch]
+                        # 每个真值标注框对应一个预测框
+                        #
                         # truth_x_all: [B, K]
                         # 计算第b张图像第ti个真值标签框的xc相对于其所属网格的大小
+                        # 设置对应网格中真值标签框xc的大小
                         target[b, a, j, i, 0] = truth_x_all[b, ti] - \
                                                 truth_x_all[b, ti].to(torch.int16).to(torch.float)
                         # truth_y_all: [B, K]
@@ -343,7 +370,7 @@ class YOLOLoss(nn.Module):
                             truth_w_all[b, ti] / torch.Tensor(self.masked_anchors)[best_n[ti], 0] + 1e-16)
                         target[b, a, j, i, 3] = torch.log(
                             truth_h_all[b, ti] / torch.Tensor(self.masked_anchors)[best_n[ti], 1] + 1e-16)
-                        # 该预测框的目标置信度参与计算
+                        # 该预测框的目标置信度设置为1，说明该预测框有效
                         target[b, a, j, i, 4] = 1
                         # 该b张第ti个真值标签框的类下标参与计算
                         target[b, a, j, i, 5 + labels[b, ti, 0].to(torch.int16).numpy()] = 1
@@ -354,11 +381,16 @@ class YOLOLoss(nn.Module):
                             2 - truth_w_all[b, ti] * truth_h_all[b, ti] / fsize / fsize)
 
             # loss calculation
-
+            # 掩码的目的是为了屏蔽不符合要求的预测框
+            # 首先过滤掉不符合条件的置信度
             output[..., 4] *= obj_mask
+            # 然后过滤掉不符合条件的坐标以及类别
             output[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
+            # 针对w/h，某些预测框还需要乘以？？？
             output[..., 2:4] *= tgt_scale
 
+            # 掩码分两部分：
+            # 一部分是预测框数据，另一部分是对应标签
             target[..., 4] *= obj_mask
             target[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
             target[..., 2:4] *= tgt_scale
@@ -385,7 +417,8 @@ class YOLOLoss(nn.Module):
             # 2*bceloss + self.l2_loss + 2*self.bce_loss + 2*self.bce_loss + self.l2_loss
 
             # loss_list.append([loss, loss_xy, loss_wh, loss_obj, loss_cls, loss_l2])
-            loss_list.append(loss + loss_xy + loss_wh + loss_obj + loss_cls + loss_l2)
+            # loss_list.append(loss + loss_xy + loss_wh + loss_obj + loss_cls + loss_l2)
+            loss_list.append(loss)
 
         return sum(loss_list)
 
