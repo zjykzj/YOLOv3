@@ -325,6 +325,12 @@ class COCODataset(Dataset):
         # print(padded_labels)
         return img, target
 
+    def set_img_size(self, img_size):
+        self.img_size = img_size
+
+    def get_img_size(self):
+        return self.img_size
+
 
 if __name__ == '__main__':
     dataset = COCODataset("COCO", name='train2017', img_size=608, is_train=True)
