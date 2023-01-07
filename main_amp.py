@@ -96,7 +96,8 @@ def parse():
 
 
 def main():
-    global best_prec1, args
+    # global best_prec1, args
+    global best_ap50, best_ap50_95, args
 
     args = parse()
     print("opt_level = {}".format(args.opt_level))
@@ -106,7 +107,9 @@ def main():
     print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
-    best_prec1 = 0
+    best_ap50 = 0
+    best_ap50_95 = 0
+    # best_prec1 = 0
     if args.deterministic:
         cudnn.benchmark = False
         cudnn.deterministic = True
@@ -211,8 +214,11 @@ def main():
                 print("=> loading checkpoint '{}'".format(args.resume))
                 checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage.cuda(args.gpu))
                 args.start_epoch = checkpoint['epoch']
-                global best_prec1
-                best_prec1 = checkpoint['best_prec1']
+                global best_ap50, best_ap50_95
+                best_ap50 = checkpoint['ap50']
+                best_ap50_95 = checkpoint['ap50_95']
+                # global best_prec1
+                # best_prec1 = checkpoint['best_prec1']
                 model.load_state_dict(checkpoint['state_dict'])
                 optimizer.load_state_dict(checkpoint['optimizer'])
                 print("=> loaded checkpoint '{}' (epoch {})"
@@ -298,15 +304,30 @@ def main():
 
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch)
+        # prec1 = validate(val_loader, model, criterion)
+        # pytorch-accurate time
 
+        # remember best prec@1 and save checkpoint
         if args.local_rank == 0:
             # evaluate on validation set
             print("Begin evaluating ...")
             ap50_95, ap50 = evaluator.evaluate(model)
-        # prec1 = validate(val_loader, model, criterion)
-        # pytorch-accurate time
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
+
+            is_best = ap50 > best_ap50
+            if is_best:
+                best_ap50 = ap50
+                best_ap50_95 = ap50_95
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'ap50': ap50,
+                'ap50_95': ap50_95,
+                'arch': args.arch,
+                'state_dict': model.state_dict(),
+                # 'best_prec1': best_prec1,
+                'best_ap50': best_ap50,
+                'best_ap50_95': best_ap50_95,
+                'optimizer': optimizer.state_dict(),
+            }, is_best)
         # # remember best prec@1 and save checkpoint
         # if args.local_rank == 0:
         #     is_best = prec1 > best_prec1
@@ -318,6 +339,9 @@ def main():
         #         'best_prec1': best_prec1,
         #         'optimizer': optimizer.state_dict(),
         #     }, is_best)
+
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
 
 
 class data_prefetcher():
@@ -378,8 +402,8 @@ class data_prefetcher():
 def train(train_loader, model, criterion, optimizer, epoch):
     batch_time = AverageMeter()
     losses = AverageMeter()
-    top1 = AverageMeter()
-    top5 = AverageMeter()
+    # top1 = AverageMeter()
+    # top5 = AverageMeter()
 
     # switch to train mode
     model.train()
@@ -580,11 +604,11 @@ class AverageMeter(object):
 
 def adjust_learning_rate(optimizer, epoch, step, len_epoch):
     """LR schedule that should yield 76% converged accuracy with batch size 256"""
-    # factor = epoch // 30
-    factor = epoch // 10
+    factor = epoch // 30
+    # factor = epoch // 10
 
-    # if epoch >= 80:
-    if epoch >= 27:
+    if epoch >= 80:
+    # if epoch >= 27:
         factor = factor + 1
 
     lr = args.lr * (0.1 ** factor)
