@@ -161,8 +161,8 @@ def main():
     model = model.cuda().to(memory_format=memory_format)
 
     # Scale learning rate based on global batch size
-    # args.lr = args.lr * float(args.batch_size * args.world_size) / 64.
-    args.lr = args.lr / args.batch_size / args.world_size
+    args.lr = args.lr * float(args.batch_size * args.world_size) / 64.
+    # args.lr = args.lr / args.batch_size / args.world_size
     # optimizer setup
     # set weight decay only on conv.weight
     # 仅针对卷积层权重执行权重衰减
@@ -170,12 +170,14 @@ def main():
     params = []
     for key, value in params_dict.items():
         if 'conv.weight' in key:
-            params += [{'params': value, 'weight_decay': args.weight_decay * args.batch_size * args.world_size}]
+            # params += [{'params': value, 'weight_decay': args.weight_decay * args.batch_size * args.world_size}]
+            params += [{'params': value, 'weight_decay': args.weight_decay}]
         else:
             params += [{'params': value, 'weight_decay': 0.0}]
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                 momentum=args.momentum,
-                                weight_decay=args.weight_decay * args.batch_size * args.world_size)
+                                # weight_decay=args.weight_decay * args.batch_size * args.world_size)
+                                weight_decay=args.weight_decay)
 
     # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
     # for convenient interoperation with argparse.
