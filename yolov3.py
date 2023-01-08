@@ -202,6 +202,13 @@ class YOLOv3(nn.Module):
                 # nn.init.constant_(m.weight, 0.01)
                 nn.init.constant_(m.bias, 0)
 
+        ckpt_path = "darknet/model_best.pth.tar"
+        print(f'Loading pretrained darknet53: {ckpt_path}')
+        ckpt = torch.load(ckpt_path, map_location='cpu')['state_dict']
+        ckpt = {key: ckpt[key] for key in list(filter(lambda x: 'backbone' in x, ckpt.keys()))}
+        ckpt = {key.replace("module.backbone.", ""): value for key, value in ckpt.items()}
+        self.backbone.load_state_dict(ckpt, strict=True)
+
     def forward(self, x):
         # x: [B, 3, H, W]
         x1, x2, x3 = self.backbone(x)
