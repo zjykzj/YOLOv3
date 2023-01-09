@@ -1,10 +1,17 @@
-import argparse
+# -*- coding: utf-8 -*-
+
 import os
 import shutil
 import time
+import json
 import random
+import tempfile
+import argparse
 
-import torch
+from tqdm import tqdm
+from pycocotools.cocoeval import COCOeval
+
+from torch.autograd import Variable
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
@@ -13,8 +20,6 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
 
-import numpy as np
-
 try:
     from apex.parallel import DistributedDataParallel as DDP
     from apex.fp16_utils import *
@@ -22,6 +27,8 @@ try:
     from apex.multi_tensor_apply import multi_tensor_applier
 except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
+
+from yolo.utils.utils import *
 
 
 def fast_collate(batch, memory_format):
@@ -216,7 +223,9 @@ def main():
                 best_ap50_95 = checkpoint['ap50_95']
                 # global best_prec1
                 # best_prec1 = checkpoint['best_prec1']
-                model.load_state_dict(checkpoint['state_dict'])
+                state_dict = checkpoint['state_dict']
+                state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
+                model.load_state_dict(state_dict)
                 optimizer.load_state_dict(checkpoint['optimizer'])
                 print("=> loaded checkpoint '{}' (epoch {})"
                       .format(args.resume, checkpoint['epoch']))
@@ -238,8 +247,8 @@ def main():
     #     val_size = 256
 
     from cocodataset import COCODataset
-    train_dataset = COCODataset('COCO', name='train2017', img_size=608)
-    # val_dataset = COCODataset('COCO', name='val2017', img_size=416)
+    train_dataset = COCODataset('COCO', name='train2017', img_size=608, is_train=True)
+    val_dataset = COCODataset('COCO', name='val2017', img_size=416, is_train=False)
     # train_dataset = datasets.ImageFolder(
     #     traindir,
     #     transforms.Compose([
@@ -252,22 +261,22 @@ def main():
     #     transforms.Resize(val_size),
     #     transforms.CenterCrop(crop_size),
     # ]))
-    from yolo.utils.cocoapi_evaluator import COCOAPIEvaluator
-
-    # COCO评估器，指定
-    # 1. 模型类型，对于YOLO，需要转换边界框坐标格式
-    # 2. 数据集路径，默认'COCO/'
-    # 3. 测试图像大小：YOLOv3采用416
-    # 4. 置信度阈值：YOLOv3采用0.8
-    # 5. NMS阈值：YOLOv3采用0.45
-    evaluator = COCOAPIEvaluator(model_type=cfg['MODEL']['TYPE'],
-                                 data_dir='COCO/',
-                                 img_size=cfg['TEST']['IMGSIZE'],
-                                 confthre=cfg['TEST']['CONFTHRE'],
-                                 nmsthre=cfg['TEST']['NMSTHRE'])
+    # from yolo.utils.cocoapi_evaluator import COCOAPIEvaluator
+    #
+    # # COCO评估器，指定
+    # # 1. 模型类型，对于YOLO，需要转换边界框坐标格式
+    # # 2. 数据集路径，默认'COCO/'
+    # # 3. 测试图像大小：YOLOv3采用416
+    # # 4. 置信度阈值：YOLOv3采用0.8
+    # # 5. NMS阈值：YOLOv3采用0.45
+    # evaluator = COCOAPIEvaluator(model_type=cfg['MODEL']['TYPE'],
+    #                              data_dir='COCO/',
+    #                              img_size=cfg['TEST']['IMGSIZE'],
+    #                              confthre=cfg['TEST']['CONFTHRE'],
+    #                              nmsthre=cfg['TEST']['NMSTHRE'])
 
     train_sampler = None
-    # val_sampler = None
+    val_sampler = None
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
         # val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
@@ -279,17 +288,21 @@ def main():
         train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler, collate_fn=collate_fn)
 
-    # val_loader = torch.utils.data.DataLoader(
-    #     val_dataset,
-    #     batch_size=args.batch_size, shuffle=False,
-    #     num_workers=args.workers, pin_memory=True,
-    #     sampler=val_sampler,
-    #     collate_fn=collate_fn)
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=1, shuffle=False,
+        num_workers=args.workers, pin_memory=True,
+        sampler=val_sampler,
+        collate_fn=collate_fn)
 
+    # conf_thresh = cfg['TEST']['CONFTHRE']
+    conf_thresh = 0.005
+    # conf_thresh = 0.5
+    nms_thresh = cfg['TEST']['NMSTHRE']
     if args.evaluate and args.local_rank == 0:
         print("Begin evaluating ...")
-        ap50_95, ap50 = evaluator.evaluate(model)
-        # validate(val_loader, model, criterion)
+        # ap50_95, ap50 = evaluator.evaluate(model)
+        validate(val_loader, model, conf_thresh, nms_thresh)
         return
 
     # pytorch-accurate time
@@ -308,7 +321,8 @@ def main():
         if args.local_rank == 0:
             # evaluate on validation set
             print("Begin evaluating ...")
-            ap50_95, ap50 = evaluator.evaluate(model)
+            # ap50_95, ap50 = evaluator.evaluate(model)
+            ap50_95, ap50 = validate(val_loader, model, conf_thresh, nms_thresh)
 
             is_best = ap50 > best_ap50
             if is_best:
@@ -512,66 +526,138 @@ def train(train_loader, model, criterion, optimizer, epoch):
             quit()
 
 
-def validate(val_loader, model, criterion):
+def validate(val_loader, model, conf_threshold, nms_threshold):
     batch_time = AverageMeter()
-    losses = AverageMeter()
-    top1 = AverageMeter()
-    top5 = AverageMeter()
 
     # switch to evaluate mode
     model.eval()
 
+    ids = list()
+    data_list = list()
+    # 数据类型
+    Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+
     end = time.time()
+    for i, (img, target) in enumerate(tqdm(val_loader)):
+        assert isinstance(target, dict)
+        img_info = [x.cpu().item() for x in target['img_info']]
+        id_ = img_info[-2]
 
-    prefetcher = data_prefetcher(val_loader)
-    input, target = prefetcher.next()
-    i = 0
-    while input is not None:
-        i += 1
-
-        # compute output
+        # 从这里也判断出是单个推理
+        id_ = int(id_)
+        # 将原始图像下标挨个保存
+        ids.append(id_)
         with torch.no_grad():
-            output = model(input)
-            loss = criterion(output, target)
+            # Numpy Ndarray -> Torch Tensor
+            img = Variable(img.type(Tensor))
+            # 模型推理，返回预测结果
+            # img: [B, 3, 416, 416]
+            outputs = model(img)
+        # 后处理，进行置信度阈值过滤 + NMS阈值过滤
+        # 输入outputs: [B, 预测框数目, 85(xywh + obj_confg + num_classes)]
+        # 输出outputs: [B, 过滤后的预测框数目, 7(xyxy + obj_conf + cls_conf + cls_id)]
+        outputs = postprocess(outputs, 80, conf_threshold, nms_threshold)
+        # 从这里也可以看出是单张推理
+        # 如果结果为空，那么不执行后续运算
+        if outputs[0] is None:
+            continue
+        # 提取单张图片的运行结果
+        # outputs: [N_ind, 7]
+        outputs = outputs[0].cpu().data
 
-        # measure accuracy and record loss
-        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-
-        if args.distributed:
-            reduced_loss = reduce_tensor(loss.data)
-            prec1 = reduce_tensor(prec1)
-            prec5 = reduce_tensor(prec5)
-        else:
-            reduced_loss = loss.data
-
-        losses.update(to_python_float(reduced_loss), input.size(0))
-        top1.update(to_python_float(prec1), input.size(0))
-        top5.update(to_python_float(prec5), input.size(0))
+        for output in outputs:
+            x1 = float(output[0])
+            y1 = float(output[1])
+            x2 = float(output[2])
+            y2 = float(output[3])
+            # 分类标签
+            label = val_loader.dataset.class_ids[int(output[6])]
+            # 转换到原始图像边界框坐标
+            box = yolobox2label((y1, x1, y2, x2), img_info[:6])
+            # [y1, x1, y2, x2] -> [x1, y1, w, h]
+            bbox = [box[1], box[0], box[3] - box[1], box[2] - box[0]]
+            # 置信度 = 目标置信度 * 分类置信度
+            score = float(output[4].data.item() * output[5].data.item())  # object score * class score
+            # 保存计算结果
+            A = {"image_id": id_, "category_id": label, "bbox": bbox,
+                 "score": score, "segmentation": []}  # COCO json format
+            data_list.append(A)
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-        # TODO:  Change timings to mirror train().
-        if args.local_rank == 0 and i % args.print_freq == 0:
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Speed {2:.3f} ({3:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-                i, len(val_loader),
-                args.world_size * args.batch_size / batch_time.val,
-                args.world_size * args.batch_size / batch_time.avg,
-                batch_time=batch_time, loss=losses,
-                top1=top1, top5=top5))
+    print('Time {batch_time.val:.3f} ({batch_time.avg:.3f})'.format(batch_time=batch_time))
 
-        input, target = prefetcher.next()
+    annType = ['segm', 'bbox', 'keypoints']
 
-    print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
-          .format(top1=top1, top5=top5))
+    # 计算完成所有测试图像的预测结果后
+    # Evaluate the Dt (detection) json comparing with the ground truth
+    if len(data_list) > 0:
+        cocoGt = val_loader.dataset.coco
+        # workaround: temporarily write data to json file because pycocotools can't process dict in py36.
+        _, tmp = tempfile.mkstemp()
+        json.dump(data_list, open(tmp, 'w'))
+        cocoDt = cocoGt.loadRes(tmp)
+        cocoEval = COCOeval(val_loader.dataset.coco, cocoDt, annType[1])
+        cocoEval.params.imgIds = ids
+        cocoEval.evaluate()
+        cocoEval.accumulate()
+        cocoEval.summarize()
+        # AP50_95, AP50
+        return cocoEval.stats[0], cocoEval.stats[1]
+    else:
+        return 0, 0
 
-    return top1.avg
+    # prefetcher = data_prefetcher(val_loader)
+    # input, target = prefetcher.next()
+    # i = 0
+    # while input is not None:
+    #     i += 1
+    #
+    #     # compute output
+    #     with torch.no_grad():
+    #         output = model(input)
+    #         loss = criterion(output, target)
+    #
+    #     # measure accuracy and record loss
+    #     prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+    #
+    #     if args.distributed:
+    #         reduced_loss = reduce_tensor(loss.data)
+    #         prec1 = reduce_tensor(prec1)
+    #         prec5 = reduce_tensor(prec5)
+    #     else:
+    #         reduced_loss = loss.data
+    #
+    #     losses.update(to_python_float(reduced_loss), input.size(0))
+    #     top1.update(to_python_float(prec1), input.size(0))
+    #     top5.update(to_python_float(prec5), input.size(0))
+    #
+    #     # measure elapsed time
+    #     batch_time.update(time.time() - end)
+    #     end = time.time()
+    #
+    #     # # TODO:  Change timings to mirror train().
+    #     # if args.local_rank == 0 and i % args.print_freq == 0:
+    #     #     print('Test: [{0}/{1}]\t'
+    #     #           'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+    #     #           'Speed {2:.3f} ({3:.3f})\t'
+    #     #           'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+    #     #           'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
+    #     #           'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
+    #     #         i, len(val_loader),
+    #     #         args.world_size * args.batch_size / batch_time.val,
+    #     #         args.world_size * args.batch_size / batch_time.avg,
+    #     #         batch_time=batch_time, loss=losses,
+    #     #         top1=top1, top5=top5))
+    #     #
+    #     # input, target = prefetcher.next()
+    #
+    # print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
+    #       .format(top1=top1, top5=top5))
+    #
+    # return top1.avg
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
@@ -605,7 +691,7 @@ def adjust_learning_rate(optimizer, epoch, step, len_epoch):
     # factor = epoch // 10
 
     if epoch >= 80:
-    # if epoch >= 27:
+        # if epoch >= 27:
         factor = factor + 1
 
     lr = args.lr * (0.1 ** factor)
