@@ -17,54 +17,7 @@ import torch
 from torch.utils.data import Dataset
 
 
-# def label2yolobox(labels, info_img):
-#     """
-#     Transform coco labels to yolo box labels
-#     Args:
-#         labels (numpy.ndarray): label data whose shape is :math:`(N, 5)`.
-#             Each label consists of [class, x, y, w, h] where \
-#                 class (float): class index.
-#                 x, y, w, h (float) : coordinates of \
-#                     left-top points, width, and height of a bounding box.
-#                     Values range from 0 to width or height of the image.
-#         info_img : tuple of h, w, nh, nw, dx, dy.
-#             h, w (int): original shape of the image
-#             nh, nw (int): shape of the resized image without padding
-#             dx, dy (int): pad size
-#         maxsize (int): target image size after pre-processing
-#         lrflip (bool): horizontal flip flag
-#
-#     Returns:
-#         labels:label data whose size is :math:`(N, 5)`.
-#             Each label consists of [class, xc, yc, w, h] where
-#                 class (float): class index.
-#                 xc, yc (float) : center of bbox whose values range from 0 to 1.
-#                 w, h (float) : size of bbox whose values range from 0 to 1.
-#     """
-#     src_h, src_w, dst_h, dst_w = info_img
-#     # xywh -> xyxy
-#     x1 = labels[:, 1] / src_w
-#     y1 = labels[:, 2] / src_h
-#     x2 = (labels[:, 1] + labels[:, 3]) / src_w
-#     y2 = (labels[:, 2] + labels[:, 4]) / src_h
-#
-#     # 计算目标图像对应边界框坐标以及宽高，计算相对比率
-#     # x_center, y_center, b_w, b_h
-#     #
-#     # dst_x / src_x = dst_w / src_w
-#     # dst_x = src_x * dst_w / src_w
-#     # labels[:, 1] = ((x1 + x2) / 2) * dst_w / src_w
-#     # labels[:, 2] = ((y1 + y2) / 2) * dst_h / src_h
-#     # labels[:, 3] *= dst_w / src_w
-#     # labels[:, 4] *= dst_h / dst_h
-#     labels[:, 1] = ((x1 + x2) / 2)
-#     labels[:, 2] = ((y1 + y2) / 2)
-#     labels[:, 3] /= src_w
-#     labels[:, 4] /= dst_h
-#     return labels
-
-
-def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0):
+def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0, random_replacing=False):
     """
     src_img: [H, W, 3]
     bboxes: [K, 4] x1/y1/b_w/b_h
@@ -87,9 +40,14 @@ def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0):
     dst_w = int(dst_w)
     dst_h = int(dst_h)
 
-    # 等比例进行上下或者左右填充
-    dx = (dst_size - dst_w) // 2
-    dy = (dst_size - dst_h) // 2
+    # 计算ROI填充到结果图像的左上角坐标
+    if random_replacing:
+        dx = int(np.random.uniform(dst_size - dst_w))
+        dy = int(np.random.uniform(dst_size - dst_h))
+    else:
+        # 等比例进行上下或者左右填充
+        dx = (dst_size - dst_w) // 2
+        dy = (dst_size - dst_h) // 2
 
     # 先进行图像缩放，然后创建目标图像，填充ROI区域
     resized_img = cv2.resize(src_img, (dst_w, dst_h))
@@ -235,6 +193,7 @@ class COCODataset(Dataset):
 
         # 图像预处理
         self.jitter_ratio = 0.3
+        self.random_replacing = True
         self.is_flip = True
         self.hue = 0.1
         self.saturation = 1.5
@@ -260,7 +219,7 @@ class COCODataset(Dataset):
         img = img[:, :, ::-1]
         if self.is_train:
             # 首先进行缩放+填充+空间抖动
-            img, bboxes, img_info = resize_and_pad(img, bboxes, self.img_size, self.jitter_ratio)
+            img, bboxes, img_info = resize_and_pad(img, bboxes, self.img_size, self.jitter_ratio, self.random_replacing)
             # 然后进行左右翻转
             if self.is_flip and np.random.randn() > 0.5:
                 img, bboxes = left_right_flip(img, bboxes)
@@ -269,7 +228,7 @@ class COCODataset(Dataset):
                 img = color_dithering(img, self.hue, self.saturation, self.exposure)
         else:
             # 进行缩放+填充，不执行空间抖动
-            img, bboxes, img_info = resize_and_pad(img, bboxes, self.img_size, 0.)
+            img, bboxes, img_info = resize_and_pad(img, bboxes, self.img_size, 0., False)
 
         return img, bboxes, img_info
 
