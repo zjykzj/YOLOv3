@@ -7,74 +7,11 @@
 @description: 
 """
 
-import math
 import torch
 from torch import nn
 
-# from yolo.model.yolo_layer import YOLOLayer
+from darknet.darknet import ConvBNAct, ResBlock, DownSample
 from yololayer import YOLOLayer
-
-
-class ConvBNAct(nn.Module):
-
-    def __init__(self, in_ch: int, out_ch: int, kernel_size: int, stride: int):
-        super().__init__()
-        pad = (kernel_size - 1) // 2
-        # H_out = floor((H_in + 2 * Pad - Dilate * (Kernel - 1) - 1) / Stride + 1)
-        #       = floor((H_in + 2 * (Kernel - 1) // 2 - Dilate * (Kernel - 1) - 1) / Stride + 1)
-
-        self.conv = nn.Conv2d(in_channels=in_ch,
-                              out_channels=out_ch,
-                              kernel_size=(kernel_size, kernel_size),
-                              stride=(stride, stride),
-                              padding=pad,
-                              bias=False)
-        self.norm = nn.BatchNorm2d(out_ch)
-        self.act = nn.LeakyReLU(0.1)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.norm(x)
-        x = self.act(x)
-
-        return x
-
-
-class ResBlock(nn.Module):
-
-    def __init__(self, ch, num_blocks=1, shortcut=True):
-
-        super().__init__()
-        self.shortcut = shortcut
-        self.module_list = nn.ModuleList()
-        for i in range(num_blocks):
-            self.module_list.append(nn.Sequential(
-                # 1x1卷积，通道数减半，不改变空间尺寸
-                ConvBNAct(ch, ch // 2, 1, 1),
-                # 3x3卷积，通道数倍增，恢复原始大小，不改变空间尺寸
-                ConvBNAct(ch // 2, ch, 3, 1)
-            ))
-
-    def forward(self, x):
-        for module in self.module_list:
-            h = x
-            h = module(h)
-            x = x + h if self.shortcut else h
-        return x
-
-
-class DownSample(nn.Module):
-
-    def __init__(self, in_ch=32, out_ch=64, kernel_size=3, stride=2, num_blocks=1, shortcut=True):
-        super(DownSample, self).__init__()
-        self.conv = ConvBNAct(in_ch=in_ch, out_ch=out_ch, kernel_size=kernel_size, stride=stride)
-        self.res_block = ResBlock(ch=out_ch, num_blocks=num_blocks, shortcut=shortcut)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.res_block(x)
-
-        return x
 
 
 class Backbone(nn.Module):
