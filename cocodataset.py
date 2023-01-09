@@ -108,7 +108,7 @@ def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0):
         # box_h
         bboxes[:, 3] = bboxes[:, 3] / src_h * dst_h
 
-    img_info = [src_h, src_w, dst_h, dst_w, dst_size, dx, dy]
+    img_info = [src_h, src_w, dst_h, dst_w, dx, dy, dst_size]
     return padded_img, bboxes, img_info
 
 
