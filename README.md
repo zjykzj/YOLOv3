@@ -101,6 +101,7 @@ python -m torch.distributed.launch --nproc_per_node=4 main_amp.py --opt-level=O0
 ```
 
 ```text
+ From Scratch
  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.22299
  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.41900
  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.21531
@@ -113,4 +114,20 @@ python -m torch.distributed.launch --nproc_per_node=4 main_amp.py --opt-level=O0
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.17870
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.38825
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.51008
+ 
+ Pretrained Backbone
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.27680                                                                                                                                  
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.49720                                                                                                                                  
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.27688                                                                                                                                  
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.10873                                                                                                                                  
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.29370                                                                                                                                  
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.42766                                                                                                                                  
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.24462                                                                                                                                  
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.37794                                                                                                                                  
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.40145                                                                                                                                  
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.21045                                                                                                                                  
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.43068                                                                                                                                  
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.55763 
 ```
+
+增加日志管理功能，使用cfg配置文件，集成evaluate函数
