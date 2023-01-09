@@ -31,21 +31,6 @@ except ImportError:
 from yolo.utils.utils import *
 
 
-def fast_collate(batch, memory_format):
-    imgs = [img[0] for img in batch]
-    targets = torch.tensor([target[1] for target in batch], dtype=torch.int64)
-    w = imgs[0].size[0]
-    h = imgs[0].size[1]
-    tensor = torch.zeros((len(imgs), 3, h, w), dtype=torch.uint8).contiguous(memory_format=memory_format)
-    for i, img in enumerate(imgs):
-        nump_array = np.asarray(img, dtype=np.uint8)
-        if (nump_array.ndim < 3):
-            nump_array = np.expand_dims(nump_array, axis=-1)
-        nump_array = np.rollaxis(nump_array, 2)
-        tensor[i] += torch.from_numpy(nump_array)
-    return tensor, targets
-
-
 def parse():
     model_names = sorted(name for name in models.__dict__
                          if name.islower() and not name.startswith("__")
@@ -100,7 +85,6 @@ def parse():
 
 
 def main():
-    # global best_prec1, args
     global best_ap50, best_ap50_95, args
 
     args = parse()
@@ -113,7 +97,6 @@ def main():
     cudnn.benchmark = True
     best_ap50 = 0
     best_ap50_95 = 0
-    # best_prec1 = 0
     if args.deterministic:
         cudnn.benchmark = False
         cudnn.deterministic = True
@@ -153,18 +136,6 @@ def main():
     # create model
     from yolov3 import YOLOv3
     model = YOLOv3(cfg['MODEL'])
-    # if args.pretrained:
-    #     print("=> using pre-trained model '{}'".format(args.arch))
-    #     model = models.__dict__[args.arch](pretrained=True)
-    # else:
-    #     print("=> creating model '{}'".format(args.arch))
-    #     model = models.__dict__[args.arch]()
-    #
-    # if args.sync_bn:
-    #     import apex
-    #     print("using apex synced BN")
-    #     model = apex.parallel.convert_syncbn_model(model)
-
     model = model.cuda().to(memory_format=memory_format)
 
     # Scale learning rate based on global batch size
@@ -206,7 +177,6 @@ def main():
         model = DDP(model, delay_allreduce=True)
 
     # define loss function (criterion) and optimizer
-    # criterion = nn.CrossEntropyLoss().cuda()
     from yololoss import YOLOLoss
     criterion = YOLOLoss(cfg['MODEL'], ignore_thre=0.7)
 
@@ -235,45 +205,9 @@ def main():
         resume()
 
     # Data loading code
-    # traindir = os.path.join(args.data, 'train')
-    # valdir = os.path.join(args.data, 'val')
-    #
-    # if (args.arch == "inception_v3"):
-    #     raise RuntimeError("Currently, inception_v3 is not supported by this example.")
-    #     # crop_size = 299
-    #     # val_size = 320 # I chose this value arbitrarily, we can adjust.
-    # else:
-    #     crop_size = 224
-    #     val_size = 256
-
     from cocodataset import COCODataset
     train_dataset = COCODataset('COCO', name='train2017', img_size=608, is_train=True)
     val_dataset = COCODataset('COCO', name='val2017', img_size=416, is_train=False)
-    # train_dataset = datasets.ImageFolder(
-    #     traindir,
-    #     transforms.Compose([
-    #         transforms.RandomResizedCrop(crop_size),
-    #         transforms.RandomHorizontalFlip(),
-    #         # transforms.ToTensor(), Too slow
-    #         # normalize,
-    #     ]))
-    # val_dataset = datasets.ImageFolder(valdir, transforms.Compose([
-    #     transforms.Resize(val_size),
-    #     transforms.CenterCrop(crop_size),
-    # ]))
-    # from yolo.utils.cocoapi_evaluator import COCOAPIEvaluator
-    #
-    # # COCO评估器，指定
-    # # 1. 模型类型，对于YOLO，需要转换边界框坐标格式
-    # # 2. 数据集路径，默认'COCO/'
-    # # 3. 测试图像大小：YOLOv3采用416
-    # # 4. 置信度阈值：YOLOv3采用0.8
-    # # 5. NMS阈值：YOLOv3采用0.45
-    # evaluator = COCOAPIEvaluator(model_type=cfg['MODEL']['TYPE'],
-    #                              data_dir='COCO/',
-    #                              img_size=cfg['TEST']['IMGSIZE'],
-    #                              confthre=cfg['TEST']['CONFTHRE'],
-    #                              nmsthre=cfg['TEST']['NMSTHRE'])
 
     train_sampler = None
     val_sampler = None
@@ -314,16 +248,15 @@ def main():
 
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch)
-        # prec1 = validate(val_loader, model, criterion)
         # pytorch-accurate time
 
         # remember best prec@1 and save checkpoint
         if args.local_rank == 0:
             # evaluate on validation set
             print("Begin evaluating ...")
-            # ap50_95, ap50 = evaluator.evaluate(model)
             ap50_95, ap50 = validate(val_loader, model, conf_thresh, nms_thresh)
 
+            # remember best prec@1 and save checkpoint
             is_best = ap50 > best_ap50
             if is_best:
                 best_ap50 = ap50
@@ -339,82 +272,14 @@ def main():
                 'best_ap50_95': best_ap50_95,
                 'optimizer': optimizer.state_dict(),
             }, is_best)
-        # # remember best prec@1 and save checkpoint
-        # if args.local_rank == 0:
-        #     is_best = prec1 > best_prec1
-        #     best_prec1 = max(prec1, best_prec1)
-        #     save_checkpoint({
-        #         'epoch': epoch + 1,
-        #         'arch': args.arch,
-        #         'state_dict': model.state_dict(),
-        #         'best_prec1': best_prec1,
-        #         'optimizer': optimizer.state_dict(),
-        #     }, is_best)
 
         if torch.cuda.is_available():
             torch.cuda.synchronize()
 
 
-class data_prefetcher():
-    def __init__(self, loader):
-        self.loader = iter(loader)
-        self.stream = torch.cuda.Stream()
-        self.mean = torch.tensor([0.485 * 255, 0.456 * 255, 0.406 * 255]).cuda().view(1, 3, 1, 1)
-        self.std = torch.tensor([0.229 * 255, 0.224 * 255, 0.225 * 255]).cuda().view(1, 3, 1, 1)
-        # With Amp, it isn't necessary to manually convert data to half.
-        # if args.fp16:
-        #     self.mean = self.mean.half()
-        #     self.std = self.std.half()
-        self.preload()
-
-    def preload(self):
-        try:
-            self.next_input, self.next_target = next(self.loader)
-        except StopIteration:
-            self.next_input = None
-            self.next_target = None
-            return
-        # if record_stream() doesn't work, another option is to make sure device inputs are created
-        # on the main stream.
-        # self.next_input_gpu = torch.empty_like(self.next_input, device='cuda')
-        # self.next_target_gpu = torch.empty_like(self.next_target, device='cuda')
-        # Need to make sure the memory allocated for next_* is not still in use by the main stream
-        # at the time we start copying to next_*:
-        # self.stream.wait_stream(torch.cuda.current_stream())
-        with torch.cuda.stream(self.stream):
-            self.next_input = self.next_input.cuda(non_blocking=True)
-            self.next_target = self.next_target.cuda(non_blocking=True)
-            # more code for the alternative if record_stream() doesn't work:
-            # copy_ will record the use of the pinned source tensor in this side stream.
-            # self.next_input_gpu.copy_(self.next_input, non_blocking=True)
-            # self.next_target_gpu.copy_(self.next_target, non_blocking=True)
-            # self.next_input = self.next_input_gpu
-            # self.next_target = self.next_target_gpu
-
-            # With Amp, it isn't necessary to manually convert data to half.
-            # if args.fp16:
-            #     self.next_input = self.next_input.half()
-            # else:
-            self.next_input = self.next_input.float()
-            self.next_input = self.next_input.sub_(self.mean).div_(self.std)
-
-    def next(self):
-        torch.cuda.current_stream().wait_stream(self.stream)
-        input = self.next_input
-        target = self.next_target
-        if input is not None:
-            input.record_stream(torch.cuda.current_stream())
-        if target is not None:
-            target.record_stream(torch.cuda.current_stream())
-        self.preload()
-        return input, target
-
-
 def train(train_loader, model, criterion, optimizer, epoch):
     batch_time = AverageMeter()
     losses = AverageMeter()
-    # top1 = AverageMeter()
-    # top5 = AverageMeter()
 
     # switch to train mode
     model.train()
@@ -423,12 +288,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
     assert hasattr(train_loader.dataset, 'set_img_size')
     for i, (input, target) in enumerate(train_loader):
         input = input.cuda()
-        # target = target.cuda()
-        # prefetcher = data_prefetcher(train_loader)
-        # input, target = prefetcher.next()
-        # i = 0
-        # while input is not None:
-        i += 1
         if args.prof >= 0 and i == args.prof:
             print("Profiling begun at iteration {}".format(i))
             torch.cuda.cudart().cudaProfilerStart()
@@ -498,17 +357,6 @@ def train(train_loader, model, criterion, optimizer, epoch):
                     img_size,
                     batch_time=batch_time,
                     loss=losses))
-                # print('Epoch: [{0}][{1}/{2}]\t'
-                #       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                #       'Speed {3:.3f} ({4:.3f})\t'
-                #       'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
-                #       'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                #       'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-                #     epoch, i, len(train_loader),
-                #     args.world_size * args.batch_size / batch_time.val,
-                #     args.world_size * args.batch_size / batch_time.avg,
-                #     batch_time=batch_time,
-                #     loss=losses, top1=top1, top5=top5))
 
             # 每隔10轮都重新指定输入图像大小
             img_size = (random.randint(0, 9) % 10 + 10) * 32
@@ -609,56 +457,6 @@ def validate(val_loader, model, conf_threshold, nms_threshold):
     else:
         return 0, 0
 
-    # prefetcher = data_prefetcher(val_loader)
-    # input, target = prefetcher.next()
-    # i = 0
-    # while input is not None:
-    #     i += 1
-    #
-    #     # compute output
-    #     with torch.no_grad():
-    #         output = model(input)
-    #         loss = criterion(output, target)
-    #
-    #     # measure accuracy and record loss
-    #     prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-    #
-    #     if args.distributed:
-    #         reduced_loss = reduce_tensor(loss.data)
-    #         prec1 = reduce_tensor(prec1)
-    #         prec5 = reduce_tensor(prec5)
-    #     else:
-    #         reduced_loss = loss.data
-    #
-    #     losses.update(to_python_float(reduced_loss), input.size(0))
-    #     top1.update(to_python_float(prec1), input.size(0))
-    #     top5.update(to_python_float(prec5), input.size(0))
-    #
-    #     # measure elapsed time
-    #     batch_time.update(time.time() - end)
-    #     end = time.time()
-    #
-    #     # # TODO:  Change timings to mirror train().
-    #     # if args.local_rank == 0 and i % args.print_freq == 0:
-    #     #     print('Test: [{0}/{1}]\t'
-    #     #           'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-    #     #           'Speed {2:.3f} ({3:.3f})\t'
-    #     #           'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-    #     #           'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-    #     #           'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-    #     #         i, len(val_loader),
-    #     #         args.world_size * args.batch_size / batch_time.val,
-    #     #         args.world_size * args.batch_size / batch_time.avg,
-    #     #         batch_time=batch_time, loss=losses,
-    #     #         top1=top1, top5=top5))
-    #     #
-    #     # input, target = prefetcher.next()
-    #
-    # print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
-    #       .format(top1=top1, top5=top5))
-    #
-    # return top1.avg
-
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
@@ -707,22 +505,6 @@ def adjust_learning_rate(optimizer, epoch, step, len_epoch):
         param_group['lr'] = lr
 
     return lr
-
-
-def accuracy(output, target, topk=(1,)):
-    """Computes the precision@k for the specified values of k"""
-    maxk = max(topk)
-    batch_size = target.size(0)
-
-    _, pred = output.topk(maxk, 1, True, True)
-    pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-    res = []
-    for k in topk:
-        correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-        res.append(correct_k.mul_(100.0 / batch_size))
-    return res
 
 
 def reduce_tensor(tensor):
