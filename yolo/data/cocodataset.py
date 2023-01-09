@@ -1,125 +1,128 @@
 # -*- coding: utf-8 -*-
 
-import os
+"""
+@date: 2023/1/3 下午5:59
+@file: cocodataset.py
+@author: zj
+@description: 
+"""
 
-from torch.utils.data import Dataset
+import cv2
+import os.path
+
+import numpy as np
 from pycocotools.coco import COCO
 
-from yolo.utils.utils import *
+import torch
+from torch.utils.data import Dataset
 
-"""
-图像预处理：
-
-1. 左右翻转
-2. 空间抖动
-3. 颜色抖动
-4. 图像缩放
-5. 颜色通道转换
-
-对于真值标签框，忽略小于指定大小的边界框；并且指定了每幅图像使用的标签个数
-
-
-"""
+from yolo.util.utils import label2yolobox
 
 
 class COCODataset(Dataset):
-    """
-    COCO dataset class.
-    """
 
-    def __init__(self, model_type, data_dir='COCO', json_file='instances_train2017.json',
-                 name='train2017', img_size=416, min_size=1):
-        """
-        COCO dataset initialization. Annotation data are read into memory by COCO API.
-        Args:
-            model_type (str): model name specified in config file
-            data_dir (str): dataset root directory
-            json_file (str): COCO json file name
-            name (str): COCO data name (e.g. 'train2017' or 'val2017')
-            img_size (int): target image size after pre-processing
-            min_size (int): bounding boxes smaller than this are ignored
-            debug (bool): if True, only one data id is selected from the dataset
-        """
-        # 数据集根路径
-        self.data_dir = data_dir
-        # 标注文件
-        self.json_file = json_file
-        # 模型类型，是否是YOLO
-        self.model_type = model_type
-        # 初始化COCO数据类
-        self.coco = COCO(self.data_dir + 'annotations/' + self.json_file)
-        # 获取图片ID
-        self.ids = self.coco.getImgIds()
-        self.class_ids = sorted(self.coco.getCatIds())
+    def __init__(self, root, name: str = 'train2017', img_size: int = 416, min_size: int = 1,
+                 model_type: str = 'YOLO', is_train: bool = True, transform=None, max_num_labels=50):
+        self.root = root
         self.name = name
-        self.max_labels = 50
-        # 输入数据大小
         self.img_size = img_size
-        # 忽略小于min_size的边界框
         self.min_size = min_size
+        self.model_type = model_type
+        self.is_train = is_train
+        self.transform = transform
+        # 单张图片预设的最大真值边界框数目
+        self.max_num_labels = max_num_labels
+
+        if 'train' in self.name:
+            json_file = 'instances_train2017.json'
+        elif 'val' in self.name:
+            json_file = 'instances_val2017.json'
+        else:
+            raise ValueError(f"{name} does not match any files")
+        annotation_file = os.path.join(self.root, 'annotations', json_file)
+        self.coco = COCO(annotation_file)
+
+        # 获取图片ID列表
+        self.ids = self.coco.getImgIds()
+        # 获取类别ID
+        self.class_ids = sorted(self.coco.getCatIds())
 
     def __len__(self):
         return len(self.ids)
 
     def __getitem__(self, index):
-        """
-        One image / label pair for the given index is picked up \
-        and pre-processed.
-        Args:
-            index (int): data index
-        Returns:
-            img (numpy.ndarray): pre-processed image
-            padded_labels (torch.Tensor): pre-processed label data. \
-                The shape is :math:`[self.max_labels, 5]`. \
-                each label consists of [class, xc, yc, w, h]:
-                    class (float): class index.
-                    xc, yc (float) : center of bbox whose values range from 0 to 1.
-                    w, h (float) : size of bbox whose values range from 0 to 1.
-            info_img : tuple of h, w, nh, nw, dx, dy.
-                h, w (int): original shape of the image
-                nh, nw (int): shape of the resized image without padding
-                dx, dy (int): pad size
-            id_ (int): same as the input index. Used for evaluation.
-        """
-        id_ = self.ids[index]
-
-        anno_ids = self.coco.getAnnIds(imgIds=[int(id_)], iscrowd=None)
+        # 获取ID
+        img_id = self.ids[index]
+        # 获取图像路径
+        img_file = os.path.join(self.root, 'images', self.name, '{:012}'.format(img_id) + '.jpg')
+        # 获取标注框信息
+        anno_ids = self.coco.getAnnIds(imgIds=[int(img_id)], iscrowd=None)
         annotations = self.coco.loadAnns(anno_ids)
-
-        # load image and preprocess
-        # img_file = os.path.join(self.data_dir, self.name,
-        img_file = os.path.join(self.data_dir, "images", self.name, '{:012}'.format(id_) + '.jpg')
-        img = cv2.imread(img_file)
-
-        if self.json_file == 'instances_val5k.json' and img is None:
-            # img_file = os.path.join(self.data_dir, 'train2017', '{:012}'.format(id_) + '.jpg')
-            img_file = os.path.join(self.data_dir, "images", 'train2017', '{:012}'.format(id_) + '.jpg')
-            img = cv2.imread(img_file)
-        assert img is not None
-
-        # 对于目标检测任务的图像预处理，需要考虑到预处理前后真值边界框的同步变化
-        # 图像缩放 + 填充
-        img, info_img = preprocess(img, self.img_size)
-
-        # 归一化
-        img = np.transpose(img / 255., (2, 0, 1))
-
-        # load labels
         labels = []
         for anno in annotations:
             if anno['bbox'][2] > self.min_size and anno['bbox'][3] > self.min_size:
-                labels.append([])
-                # 类别ID
-                labels[-1].append(self.class_ids.index(anno['category_id']))
-                # 类别框
-                labels[-1].extend(anno['bbox'])
+                tmp_label = [self.class_ids.index(anno['category_id'])]
+                # bbox: [x, y, w, h]
+                tmp_label.extend(anno['bbox'])
+                labels.insert(0, tmp_label)
+        labels = np.array(labels)
 
-        padded_labels = np.zeros((self.max_labels, 5))
+        # 读取图像
+        img = cv2.imread(img_file)
+        # 图像预处理
+        if self.transform is not None:
+            if len(labels) > 0:
+                img, bboxes, img_info = self.transform(img, labels[:, 1:])
+                labels[:, 1:] = bboxes
+            else:
+                img, bboxes, img_info = self.transform(img, labels)
+        assert isinstance(img_info, list)
+        img_info.append(img_id)
+        img_info.append(index)
+        if self.is_train:
+            print(img_info)
+        assert np.all(bboxes <= self.img_size), print(img_info, '\n', bboxes)
+        # 数据预处理
+        img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
+
+        # 每幅图像设置固定个数的真值边界框，不足的填充为0
+        padded_labels = np.zeros((self.max_num_labels, 5))
         if len(labels) > 0:
             labels = np.stack(labels)
             if 'YOLO' in self.model_type:
-                labels = label2yolobox(labels, info_img, self.img_size)
-            padded_labels[range(len(labels))[:self.max_labels]] = labels[:self.max_labels]
+                labels = label2yolobox(labels)
+                assert np.all(labels <= self.img_size), print(img_info, '\n', labels)
+            padded_labels[range(len(labels))[:self.max_num_labels]] = labels[:self.max_num_labels]
         padded_labels = torch.from_numpy(padded_labels)
 
-        return img, padded_labels, info_img, id_
+        # return img, padded_labels, labels, info_img
+        # img: [3, H, W]
+        # padded_labels: [K, 5]
+        target = dict({
+            'padded_labels': padded_labels,
+            "img_info": img_info
+        })
+        # print(padded_labels)
+        return img, target
+
+    def set_img_size(self, img_size):
+        self.img_size = img_size
+
+    def get_img_size(self):
+        return self.img_size
+
+
+if __name__ == '__main__':
+    dataset = COCODataset("COCO", name='train2017', img_size=608, is_train=True)
+    # dataset = COCODataset("COCO", name='val2017', img_size=416, is_train=False)
+
+    # img, target = dataset.__getitem__(333)
+    # img, target = dataset.__getitem__(57756)
+    # img, target = dataset.__getitem__(87564)
+    img, target = dataset.__getitem__(51264)
+    print(img.shape)
+    padded_labels = target['padded_labels']
+    img_info = target['img_info']
+    print(padded_labels.shape)
+    print(img_info)
+    print(padded_labels)

@@ -6,7 +6,7 @@
 @author: zj
 @description: 
 """
-
+from typing import Dict
 import numpy as np
 
 import torch
@@ -98,44 +98,25 @@ class YOLOLoss(nn.Module):
 
     """
 
-    def __init__(self, config_model, ignore_thre=0.7):
+    def __init__(self, cfg: Dict, ignore_thresh=0.7):
         super(YOLOLoss, self).__init__()
-        self.config_model = config_model
+        self.cfg = cfg
         # 阈值
-        self.ignore_thre = ignore_thre
+        self.ignore_thresh = ignore_thresh
 
         # 特征图相对于
         # [3]
         self.strides = [32, 16, 8]  # fixed
         # 预设的锚点框列表，保存了所有的锚点框长宽
         # [9, 2]
-        self.anchors = config_model['ANCHORS']
-        # # 指定不同YOLO层使用的锚点框
-        # # [3, 3] -> [3]
-        # self.anch_mask = config_model['ANCH_MASK'][layer_no]
-        # # 某一个YOLO层使用的锚点框个数，默认为3
-        # self.n_anchors = len(self.anch_mask)
+        self.anchors = cfg['ANCHORS']
         # 数据集类别数
         # COCO: 80
-        self.n_classes = config_model['N_CLASSES']
+        self.n_classes = cfg['N_CLASSES']
 
         # 损失函数，work for ???
         self.l2_loss = nn.MSELoss(size_average=False)
         self.bce_loss = nn.BCELoss(size_average=False)
-
-        # # 第N个YOLO层使用的步长，也就是输入图像大小和使用的特征数据之间的缩放比率
-        # self.stride = strides[layer_no]
-        # # 按比例缩放锚点框长／宽
-        # # [9, 2]
-        # self.all_anchors_grid = [(w / self.stride, h / self.stride) for w, h in self.anchors]
-        # # 采集指定YOLO使用的锚点
-        # # [3, 2]
-        # self.masked_anchors = [self.all_anchors_grid[i] for i in self.anch_mask]
-        # # [9, 4]
-        # self.ref_anchors = np.zeros((len(self.all_anchors_grid), 4))
-        # # 赋值，锚点框宽／高
-        # self.ref_anchors[:, 2:] = np.array(self.all_anchors_grid)
-        # self.ref_anchors = torch.FloatTensor(self.ref_anchors)
 
     def forward(self, outputs, target):
         assert isinstance(target, dict)
@@ -153,7 +134,7 @@ class YOLOLoss(nn.Module):
             layer_no = output_dict['layer_no']
             # 获取当前YOLO层特征数据使用的锚点框
             # [3, 3] -> [3]
-            self.anch_mask = self.config_model['ANCH_MASK'][layer_no]
+            self.anch_mask = self.cfg['ANCHOR_MASK'][layer_no]
             # 当前YOLO层特征数据使用的锚点框个数，默认为3
             self.n_anchors = len(self.anch_mask)
 
@@ -300,7 +281,7 @@ class YOLOLoss(nn.Module):
                 pred_best_iou, _ = pred_ious.max(dim=1)
                 # 计算掩码，IoU比率要大于忽略阈值。也就是说，如果IoU大于忽略阈值（也就是说预测框坐标与真值标注框坐标非常接近），那么该预测框不参与损失计算
                 # pred_best_iou: [n_anchors*F_H*F_W]，取值为true/false
-                pred_best_iou = (pred_best_iou > self.ignore_thre)
+                pred_best_iou = (pred_best_iou > self.ignore_thresh)
                 # 改变形状，[n_anchors*F_H*F_W] -> [n_anchors, F_H, F_W]
                 pred_best_iou = pred_best_iou.view(pred[b].shape[:3])
                 # set mask to zero (ignore) if pred matches truth
@@ -430,7 +411,7 @@ if __name__ == '__main__':
 
         cfg = yaml.safe_load(f)
 
-    m = YOLOLoss(cfg['MODEL'], 0, ignore_thre=0.70)
+    m = YOLOLoss(cfg['MODEL'], 0, ignore_thresh=0.70)
     print(m)
 
     output = torch.randn(10, 3 * (5 + 80), 20, 20)

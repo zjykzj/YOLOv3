@@ -50,7 +50,7 @@ class YOLOLayer(nn.Module):
         [B, n_anchors, F_H, F_W, n_ch] -> [B, n_anchors * F_H * F_W, n_ch]
     """
 
-    def __init__(self, config_model, layer_no, in_ch):
+    def __init__(self, cfg, layer_no, in_ch):
         super(YOLOLayer, self).__init__()
 
         # 预先设定的缩放倍数
@@ -60,9 +60,9 @@ class YOLOLayer(nn.Module):
         self.layer_no = layer_no
 
         # 预定义的所有锚点框
-        self.anchors = config_model['ANCHORS']
+        self.anchors = cfg['ANCHORS']
         # 获取当前YOLO层使用的锚点框
-        self.anch_mask = config_model['ANCH_MASK'][layer_no]
+        self.anch_mask = cfg['ANCHOR_MASK'][layer_no]
         # 获取当前YOLO层使用的锚点框个数，默认为3
         self.n_anchors = len(self.anch_mask)
         # 按照指定倍数进行缩放
@@ -70,7 +70,7 @@ class YOLOLayer(nn.Module):
         self.masked_anchors = [self.all_anchors_grid[i] for i in self.anch_mask]
 
         # 数据集类别数
-        self.n_classes = config_model['N_CLASSES']
+        self.n_classes = cfg['N_CLASSES']
         # 1x1卷积操作，计算特征图中每个网格的预测框（锚点框数量*(类别数+4(xywh)+1(置信度))）
         self.conv = nn.Conv2d(in_channels=in_ch,
                               out_channels=self.n_anchors * (self.n_classes + 5),
