@@ -142,15 +142,13 @@ class Transform(object):
         self.saturation = cfg['AUGMENTATION']['SATURATION']
         self.exposure = cfg['AUGMENTATION']['EXPOSURE']
 
-        # 输入大小
-        self.img_size = cfg['TRAIN']['IMGSIZE'] if is_train else cfg['TEST']['IMGSIZE']
-
-    def __call__(self, img: ndarray, bboxes: List):
+    def __call__(self, img: ndarray, bboxes: List, img_size: int):
         # BGR -> RGB
         img = img[:, :, ::-1]
         if self.is_train:
             # 首先进行缩放+填充+空间抖动
-            img, bboxes, img_info = resize_and_pad(img, bboxes, self.img_size, self.jitter_ratio, self.random_placing)
+            img, bboxes, img_info = resize_and_pad(img, bboxes, img_size, self.jitter_ratio, self.random_placing)
+            assert np.all(bboxes <= img_size), print(img_info, '\n', bboxes)
             # 然后进行左右翻转
             if self.is_flip and np.random.randn() > 0.5:
                 img, bboxes = left_right_flip(img, bboxes)
@@ -159,6 +157,7 @@ class Transform(object):
                 img = color_dithering(img, self.hue, self.saturation, self.exposure)
         else:
             # 进行缩放+填充，不执行空间抖动
-            img, bboxes, img_info = resize_and_pad(img, bboxes, self.img_size, jitter_ratio=0., random_replacing=False)
+            img, bboxes, img_info = resize_and_pad(img, bboxes, img_size, jitter_ratio=0., random_replacing=False)
+            assert np.all(bboxes <= img_size), print(img_info, '\n', bboxes)
 
         return img, bboxes, img_info

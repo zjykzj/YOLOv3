@@ -72,15 +72,13 @@ class COCODataset(Dataset):
         # 图像预处理
         if self.transform is not None:
             if len(labels) > 0:
-                img, bboxes, img_info = self.transform(img, labels[:, 1:])
+                img, bboxes, img_info = self.transform(img, labels[:, 1:], self.img_size)
                 labels[:, 1:] = bboxes
             else:
-                img, bboxes, img_info = self.transform(img, labels)
+                img, bboxes, img_info = self.transform(img, labels, self.img_size)
         assert isinstance(img_info, list)
         img_info.append(img_id)
         img_info.append(index)
-        if self.is_train:
-            print(img_info)
         assert np.all(bboxes <= self.img_size), print(img_info, '\n', bboxes)
         # 数据预处理
         img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
