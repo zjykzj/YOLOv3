@@ -1,32 +1,31 @@
-from typing import List, Tuple, Optional
+# -*- coding: utf-8 -*-
+
+from typing import List, Tuple, Dict
+
+import cv2
+import yaml
 
 import argparse
 from argparse import Namespace
 
-import torch
-import yaml
-
+import numpy as np
 from numpy import ndarray
 
+import torch.cuda
 from torch import Tensor
 from torch.nn import Module
-from torch.autograd import Variable
 
-from easydict import EasyDict
-
-from yolo.model.yolov3 import *
-from yolo.utils.utils import *
-from yolo.utils.parse_yolo_weights import parse_yolo_weights
+from yolo.data.cocodataset import get_coco_label_names
+from yolo.data.transform import Transform
+from yolo.model.yolov3 import YOLOv3
+from yolo.util.utils import yolobox2label, postprocess
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--cfg', type=str, default='config/yolov3_default.cfg')
     parser.add_argument('--ckpt', type=str,
                         help='path to the check point file')
-    parser.add_argument('--weights_path', type=str,
-                        default=None, help='path to weights file')
     parser.add_argument('--image', type=str)
     parser.add_argument('--background', action='store_true',
                         default=False, help='background(no-display mode. save "./output.png")')
@@ -36,11 +35,10 @@ def parse_args():
 
     with open(args.cfg, 'r') as f:
         cfg = yaml.safe_load(f)
-    cfg = EasyDict(d=cfg)
     return args, cfg
 
 
-def image_preprocess(args: Namespace, cfg: EasyDict):
+def image_preprocess(args: Namespace, cfg: Dict):
     """
     图像预处理
 
@@ -49,54 +47,41 @@ def image_preprocess(args: Namespace, cfg: EasyDict):
     2. 数据维度转换
     3. 图像大小缩放
     4. 数据归一化
-    5. 赋值到指定设备（cpu/gpu）
     """
-    # 输入图像大小
-    imgsize = cfg.TEST.IMGSIZE
+    transform = Transform(cfg, is_train=False)
+
     # BGR
     img = cv2.imread(args.image)
-    # 原始图像处理
-    # [H, W, C] -> [C, H, W]　同时　BGR -> RGB
     img_raw = img.copy()[:, :, ::-1].transpose((2, 0, 1))
-    # 输入图像处理，增加一个图像缩放
-    img, info_img = preprocess(img, imgsize, jitter=0)  # info = (h, w, nh, nw, dx, dy)
-    # 图像归一化 + 通道转换（[H, W, C] -> [C, H, W]）
-    img = np.transpose(img / 255., (2, 0, 1))
-    # [C, H, W] -> [1, C, H, W]
-    img = torch.from_numpy(img).float().unsqueeze(0)
 
-    if args.gpu >= 0:
-        img = Variable(img.type(torch.cuda.FloatTensor))
-    else:
-        img = Variable(img.type(torch.FloatTensor))
+    imgsize = cfg['TEST']['IMGSIZE']
+    img, _, img_info = transform(img, np.array([]), imgsize)
+    # 数据预处理
+    img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
+    img = img.unsqueeze(0)
+    print("img:", img.shape)
 
     # 返回输入图像数据、原始图像数据、图像缩放前后信息
-    return img, img_raw, info_img
+    return img, img_raw, img_info
 
 
-def model_preprocess(args: Namespace, cfg: EasyDict):
+def model_init(args: Namespace, cfg: Dict):
     """
     创建模型，赋值预训练权重
     """
-    model = YOLOv3(cfg.MODEL)
-    if args.gpu >= 0:
-        model.cuda(args.gpu)
-    assert args.weights_path or args.ckpt, 'One of --weights_path and --ckpt must be specified'
+    device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+    model = YOLOv3(cfg['MODEL']).to(device)
+    assert args.ckpt, '--ckpt must be specified'
 
-    if args.weights_path:
-        print("loading yolo weights %s" % (args.weights_path))
-        # 加载YOLO权重
-        parse_yolo_weights(model, args.weights_path)
-    elif args.ckpt:
-        print("loading checkpoint %s" % (args.ckpt))
-        state = torch.load(args.ckpt)
-        if 'model_state_dict' in state.keys():
-            model.load_state_dict(state['model_state_dict'])
-        else:
-            model.load_state_dict(state)
+    if args.ckpt:
+        print("=> loading checkpoint '{}'".format(args.ckpt))
+        checkpoint = torch.load(args.ckpt, map_location=device)
+
+        state_dict = {key.replace("module.", ""): value for key, value in checkpoint['state_dict'].items()}
+        model.load_state_dict(state_dict, strict=True)
 
     model.eval()
-    return model
+    return model, device
 
 
 def parse_info(outputs: List, info_img: List or Tuple):
@@ -124,19 +109,19 @@ def parse_info(outputs: List, info_img: List or Tuple):
     return bboxes, classes, colors, coco_class_names
 
 
-def process(args: Namespace, cfg: EasyDict, model: Module, img: Tensor):
+def process(args: Namespace, cfg: Dict, img: Tensor, model: Module, device: torch.device):
     """
     模型推理 + 后处理（置信度阈值过滤 + IoU阈值过滤）
     """
-    confthre = cfg.TEST.CONFTHRE
-    nmsthre = cfg.TEST.NMSTHRE
+    confthre = cfg['TEST']['CONFTHRE']
+    nmsthre = cfg['TEST']['NMSTHRE']
     if args.detect_thresh:
         confthre = args.detect_thresh
 
     with torch.no_grad():
         # img: [1, 3, 416, 416]
         # 执行模型推理，批量计算每幅图像的预测框坐标以及对应的目标置信度+分类概率
-        outputs = model(img).cpu()
+        outputs = model(img.to(device)).cpu()
         # outputs: [B, N_bbox, 4(xywh)+1(conf)+num_classes]
         # 图像后处理，执行预测边界框的坐标转换以及置信度阈值过滤+NMS IoU阈值过滤
         outputs = postprocess(outputs, 80, confthre, nmsthre)
@@ -175,15 +160,15 @@ def main():
     """
     args, cfg = parse_args()
 
-    img, img_raw, info_img = image_preprocess(args, cfg)
-    model = model_preprocess(args, cfg)
+    img, img_raw, img_info = image_preprocess(args, cfg)
+    model, device = model_init(args, cfg)
 
-    outputs = process(args, cfg, model, img)
+    outputs = process(args, cfg, img, model, device)
     if outputs[0] is None:
         print("No Objects Deteted!!")
         return
 
-    bboxes, classes, colors, coco_class_names = parse_info(outputs, info_img)
+    bboxes, classes, colors, coco_class_names = parse_info(outputs, img_info[:6])
     show_bbox(args, img_raw, bboxes, classes, coco_class_names, colors)
 
 
