@@ -63,7 +63,7 @@ def main():
     with open(args.cfg, 'r') as f:
         cfg = yaml.safe_load(f)
 
-    print("successfully loaded config file: ", cfg)
+    print("successfully loaded config file: ", args.cfg)
 
     # Initiate model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
