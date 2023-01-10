@@ -1,13 +1,18 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import division
+from typing import Dict
+
+import yaml
+import torch.cuda
 
 import argparse
-import yaml
+from argparse import Namespace
 
-import torch
-
-from yolo.utils.cocoapi_evaluator import COCOAPIEvaluator
-from yolo.utils.parse_yolo_weights import parse_yolo_weights
-from yolo.model.yolov3 import *
+from yolo.data.transform import Transform
+from yolo.data.cocodataset import COCODataset
+from yolo.model.yolov3 import YOLOv3
+from yolo.engine.build import validate
 
 """
 操作流程：
@@ -21,21 +26,30 @@ from yolo.model.yolov3 import *
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    # 模型配置以及训练配置
-    parser.add_argument('--cfg', type=str, default='config/yolov3_default.cfg',
+    parser.add_argument('data', metavar='DIR',
+                        help='path to dataset')
+    parser.add_argument('-c', '--cfg', type=str, default='config/yolov3_default.cfg',
                         help='config file. see readme')
-    # 权重路径
-    parser.add_argument('--weights_path', type=str,
-                        default=None, help='darknet weights file')
-    # 数据加载线程数
-    parser.add_argument('--n_cpu', type=int, default=0,
-                        help='number of workers')
-    # ???
-    parser.add_argument('--checkpoint', type=str,
+    parser.add_argument('-ckpt', '--checkpoint', type=str,
                         help='pytorch checkpoint file path')
-    # 是否使用GPU（注意：本仓库仅实现了单GPU训练）
-    parser.add_argument('--use_cuda', type=bool, default=True)
     return parser.parse_args()
+
+
+def data_init(args: Namespace, cfg: Dict):
+    val_transform = Transform(cfg, is_train=False)
+    val_dataset = COCODataset(root=args.data,
+                              name='val2017',
+                              img_size=cfg['TEST']['IMGSIZE'],
+                              model_type=cfg['MODEL']['TYPE'],
+                              is_train=False,
+                              transform=val_transform,
+                              max_num_labels=cfg['DATA']['MAX_NUM_LABELS'],
+                              )
+    val_loader = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=1, shuffle=False, num_workers=0, pin_memory=True, sampler=None)
+
+    return val_loader
 
 
 def main():
@@ -45,55 +59,33 @@ def main():
     args = parse_args()
     print("Setting Arguments.. : ", args)
 
-    cuda = torch.cuda.is_available() and args.use_cuda
-
     # Parse config settings
     with open(args.cfg, 'r') as f:
-        # cfg = yaml.load(f)
         cfg = yaml.safe_load(f)
 
     print("successfully loaded config file: ", cfg)
 
-    # 阈值
-    ignore_thre = cfg['TRAIN']['IGNORETHRE']
     # Initiate model
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # YOLOv3还是通过模型定义方式获取YOLO模型！！！
-    model = YOLOv3(cfg['MODEL'], ignore_thre=ignore_thre)
+    model = YOLOv3(cfg['MODEL']).to(device)
 
     # 预训练权重加载，共两种方式
-    if args.weights_path:
-        # 方式一：Darknet格式权重文件
-        print("loading darknet weights....", args.weights_path)
-        parse_yolo_weights(model, args.weights_path)
-    elif args.checkpoint:
-        # 方式二：Pytorch格式权重文件
-        print("loading pytorch ckpt...", args.checkpoint)
-        state = torch.load(args.checkpoint)
-        if 'model_state_dict' in state.keys():
-            model.load_state_dict(state['model_state_dict'])
-        else:
-            model.load_state_dict(state)
+    if args.checkpoint:
+        print("=> loading checkpoint '{}'".format(args.checkpoint))
+        checkpoint = torch.load(args.checkpoint, map_location=device)
 
-    if cuda:
-        # GPU训练
-        print("using cuda")
-        model = model.cuda()
+        state_dict = {key.replace("module.", ""): value for key, value in checkpoint['state_dict'].items()}
+        model.load_state_dict(state_dict, strict=True)
 
-    # COCO评估器，指定
-    # 1. 模型类型，对于YOLO，需要转换边界框坐标格式
-    # 2. 数据集路径，默认'COCO/'
-    # 3. 测试图像大小：YOLOv3采用416
-    # 4. 置信度阈值：YOLOv3采用0.8
-    # 5. NMS阈值：YOLOv3采用0.45
-    evaluator = COCOAPIEvaluator(model_type=cfg['MODEL']['TYPE'],
-                                 data_dir='COCO/',
-                                 img_size=cfg['TEST']['IMGSIZE'],
-                                 confthre=cfg['TEST']['CONFTHRE'],
-                                 nmsthre=cfg['TEST']['NMSTHRE'])
+    val_loader = data_init(args, cfg)
 
-    # 每隔eval_interval进行评估
     print("Begin evaluating ...")
-    ap50_95, ap50 = evaluator.evaluate(model)
+    # conf_thresh = cfg['TEST']['CONFTHRE']
+    conf_thresh = 0.005
+    # conf_thresh = 0.5
+    nms_thresh = float(cfg['TEST']['NMSTHRE'])
+    ap50_95, ap50 = validate(val_loader, model, conf_thresh, nms_thresh, device=device)
 
 
 if __name__ == '__main__':
