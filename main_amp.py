@@ -28,11 +28,11 @@ from yolo.util.utils import save_checkpoint, synchronize
 
 
 def parse():
-    parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
+    parser = argparse.ArgumentParser(description='PyTorch YOLOv3 Training')
     parser.add_argument('data', metavar='DIR',
                         help='path to dataset')
-    parser.add_argument('-c', "--cfg", default='config/yolov3_zj.cfg', type=str, metavar='CFG',
-                        help='path to config file (default: config/yolov3_zj.cfg)')
+    parser.add_argument('-c', "--cfg", default='config/yolov3_default.cfg', type=str, metavar='CFG',
+                        help='path to config file (default: config/yolov3_default.cfg)')
     parser.add_argument('--print-freq', '-p', default=10, type=int,
                         metavar='N', help='print frequency (default: 10)')
     parser.add_argument('--resume', default='', type=str, metavar='PATH',

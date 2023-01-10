@@ -28,7 +28,9 @@
 
 ## Background
 
-The purpose of creating this warehouse is to better understand the YOLO series target detection network. Note: The realization of the project depends heavily on the implementation of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [NVIDIA/apex](https://github.com/NVIDIA/apex)
+The purpose of creating this warehouse is to better understand the YOLO series object detection network. Note: The
+realization of the project depends heavily on the implementation
+of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [NVIDIA/apex](https://github.com/NVIDIA/apex)
 
 ## Installation
 

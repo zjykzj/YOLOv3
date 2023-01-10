@@ -1,5 +1,5 @@
 
-# Trouble Shotting
+# Trouble Shooting
 
 ```text
 RuntimeError: unable to write to file </torch_3377_1311053497_0>: No space left on device (28)
