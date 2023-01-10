@@ -1,134 +1,65 @@
+<div align="right">
+  Language:
+    🇺🇸
+  <a title="Chinese" href="./README.zh-CN.md">🇨🇳</a>
+</div>
 
-# YOLOv3
+<div align="center"><a title="" href="https://github.com/zjykzj/YOLOv3"><img align="center" src="./imgs/YOLOv3.png" alt=""></a></div>
 
-Base library from [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [apex/examples/imagenet](https://github.com/NVIDIA/apex/tree/master/examples/imagenet)
+<p align="center">
+  «YOLOv3» reproduced the paper "YOLOv3: An Incremental Improvement"
+<br>
+<br>
+  <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/standard--readme-OK-green.svg?style=flat-square" alt=""></a>
+  <a href="https://conventionalcommits.org"><img src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg" alt=""></a>
+  <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
+</p>
 
-## Train
+## Table of Contents
 
-1. 默认将配置文件保存在
+- [Table of Contents](#table-of-contents)
+- [Background](#background)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Maintainers](#maintainers)
+- [Thanks](#thanks)
+- [Contributing](#contributing)
+- [License](#license)
 
-* 单GPU训练
+## Background
 
-```shell
-CUDA_VISIBLE_DEVICES=3 python main_amp.py -b 16 --workers 4 --opt-level O0 ./COCO/
-```
+The implementation of this warehouse depends heavily on the implementation of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [apex/examples/imagenet](https://github.com/NVIDIA/apex/tree/master/examples/imagenet)
 
-* 多GPU训练
+## Installation
 
-```shell
-CUDA_VISIBLE_DEVICES=4,5,6,7 python -m torch.distributed.launch --nproc_per_node=4 main_amp.py -b 16 --workers 4 --opt-level O0 ./COCO/
-CUDA_VISIBLE_DEVICES=4,5,6,7 python -m torch.distributed.launch --nproc_per_node=4 main_amp.py --opt-level=O0 -b 16 --epochs 90 --lr 0.001 COCO
-```
+...
 
-## ERROR
+## Usage
 
-```text
-RuntimeError: unable to write to file </torch_3377_1311053497_0>: No space left on device (28)
-Fix:
-    https://discuss.pytorch.org/t/unable-to-write-to-file-torch-18692-1954506624/9990/4
-    docker run --gpus all --privileged -it --ipc=host -v /home/zj:/home/zj -v /data:/data --rm nvcr.io/nvidia/pytorch:22.08-py3
-```
+...
 
-```text
-RuntimeError: cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input.
-Fix:
-    RuntimeError: cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input #32564
-    https://github.com/pytorch/pytorch/issues/32564#issuecomment-633739690
-```
+## Maintainers
 
-YOLOv3和YOLOv7应该是一样的操作步骤，唯一的差别在于模型的提取
+* zhujian - *Initial work* - [zjykzj](https://github.com/zjykzj)
 
-## 训练配置
+## Thanks
 
-* 损失函数：YOLOLoss
-* 优化器：SGD
-* 学习率调度器： Warmup + StepLR
+* [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3)
+* [apex/examples/imagenet](https://github.com/NVIDIA/apex/tree/master/examples/imagenet)
+* [ZJCV/ZCls2](https://github.com/ZJCV/ZCls2)
 
-批量大小：4
-子批次大小：16
+## Contributing
 
-也就是单次批量大小为64
+Anyone's participation is welcome! Open an [issue](https://github.com/zjykzj/YOLOv3/issues) or submit PRs.
 
-学习率设置：
+Small note:
 
-初始学习率 / 批量大小 / 子批次大小 = 0.001 / 4 / 16 = 1.5625e-05
+* Git submission specifications should be complied
+  with [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0-beta.4/)
+* If versioned, please conform to the [Semantic Versioning 2.0.0](https://semver.org) specification
+* If editing the README, please conform to the [standard-readme](https://github.com/RichardLitt/standard-readme)
+  specification.
 
-初始学习率设置：0.001
-动量大小：0.9
-权重衰减大小：5e-4
+## License
 
-## 数据
-
-### 数据预处理
-
-* 在训练阶段，执行 
-  * 左右翻转 
-  * 空间抖动 
-  * 图像缩放（等比填充） 
-  * 颜色抖动
-
-前面三个属于空间变换，会改变图像原始坐标系，所以对应的边界框坐标也会发生变化；最后一个属于颜色变换，不会对边界框造成影响
-
-* 在推理阶段，执行
-  * 图像缩放（等比填充）
-
-完成上述图像处理后均会执行数据归一化（除以255）操作。注意：针对不同格式的边界框还需要进行《格式转换》，将x1/y1/x2/y2 -> xc/yc/w/h
-
-### 数据加载
-
-从COCO数据集中采集图像以及对应的类别标签和真值边界框
-
-### 操作流程
-
-1. 输入采样图像的下标
-2. 根据下标获取对应的图像路径
-3. 根据下标获取对应的标注信息，包括类别下标以及真值标注框
-4. 预处理操作
-   1. 读取图像，进行格式转换以及维度转换
-   2. 针对图像执行图像预处理，相应的转换标注框坐标
-   3. 针对图像执行数据归一化操作
-5. 在训练阶段，对于损失函数，需要知道预处理后的真值标注框的坐标
-6. 在推理阶段，对于COCO评估器，需要将预测边界框转换回原始图像边界框，所以需要知道
-   1. 原始图像大小
-   2. 缩放后图像大小
-   3. 填充后ROI区域左上角坐标
-7. 综合来说，返回2个item:
-   1. item1: torch.Tensor格式，预处理后的图像数据
-   2. item2: 字典格式，包含了类别下标、预处理后的标注框、图像缩放/填充/抖动前后的大小以及ROI左上角坐标、提取图像列表下标
-
-```shell
-python -m torch.distributed.launch --nproc_per_node=4 main_amp.py --opt-level=O0 -b 16 --epochs 90 --lr 0.001 COCO
-```
-
-```text
- From Scratch
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.22299
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.41900
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.21531
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.08161
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.22771
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.33485
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.21648
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.34040
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.36405
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.17870
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.38825
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.51008
- 
- Pretrained Backbone
- CUDA_VISIBLE_DEVICES=4,5,6,7 python -m torch.distributed.launch --nproc_per_node=4 --master_port "32163" main_amp.py --opt-level=O0 -b 16 --epochs 90 --lr 0.001 --weight-decay 1e-4 COCO
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.27713
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.50094
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.27660
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.11480
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.28946
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.42232
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.24398
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.37827
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.40052
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.21317
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.42649
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.55430
-```
-
-增加日志管理功能，使用cfg配置文件，集成evaluate函数
+[Apache License 2.0](LICENSE) © 2022 zjykzj
