@@ -15,6 +15,14 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
+The input size is `416`, the confidence threshold is `0.005`, and the reasoning result of COCO val dataset is as follows:
+
+<table><tbody>
+<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> Original (darknet) </td><td bgcolor=white> DeNA/PyTorch_YOLOv3 </td><td bgcolor=white> Ours (pytorch) </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> COCO AP[IoU=0.50:0.95], inference</th> <td bgcolor=white> 0.310 </td><td bgcolor=white> 0.311 </td><td bgcolor=white> 0.277 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> COCO AP[IoU=0.50],      inference</th> <td bgcolor=white> 0.553 </td><td bgcolor=white> 0.558 </td><td bgcolor=white> 0.501 </td></tr>
+</table></tbody>
+
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
