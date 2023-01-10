@@ -28,7 +28,7 @@
 
 ## Background
 
-The implementation of this warehouse depends heavily on the implementation of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [apex/examples/imagenet](https://github.com/NVIDIA/apex/tree/master/examples/imagenet)
+The purpose of creating this warehouse is to better understand the YOLO series target detection network. Note: The realization of the project depends heavily on the implementation of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [NVIDIA/apex](https://github.com/NVIDIA/apex)
 
 ## Installation
 
@@ -45,7 +45,7 @@ The implementation of this warehouse depends heavily on the implementation of [D
 ## Thanks
 
 * [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3)
-* [apex/examples/imagenet](https://github.com/NVIDIA/apex/tree/master/examples/imagenet)
+* [NVIDIA/apex](https://github.com/NVIDIA/apex)
 * [ZJCV/ZCls2](https://github.com/ZJCV/ZCls2)
 
 ## Contributing
