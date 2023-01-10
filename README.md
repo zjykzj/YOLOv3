@@ -116,18 +116,19 @@ python -m torch.distributed.launch --nproc_per_node=4 main_amp.py --opt-level=O0
  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.51008
  
  Pretrained Backbone
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.27680                                                                                                                                  
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.49720                                                                                                                                  
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.27688                                                                                                                                  
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.10873                                                                                                                                  
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.29370                                                                                                                                  
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.42766                                                                                                                                  
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.24462                                                                                                                                  
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.37794                                                                                                                                  
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.40145                                                                                                                                  
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.21045                                                                                                                                  
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.43068                                                                                                                                  
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.55763 
+ CUDA_VISIBLE_DEVICES=4,5,6,7 python -m torch.distributed.launch --nproc_per_node=4 --master_port "32163" main_amp.py --opt-level=O0 -b 16 --epochs 90 --lr 0.001 --weight-decay 1e-4 COCO
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.27713
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.50094
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.27660
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.11480
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.28946
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.42232
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.24398
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.37827
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.40052
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.21317
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.42649
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.55430
 ```
 
 增加日志管理功能，使用cfg配置文件，集成evaluate函数
