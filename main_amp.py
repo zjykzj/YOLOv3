@@ -26,6 +26,11 @@ from yolo.optim.lr_schedulers.build import build_lr_scheduler
 from yolo.engine.build import validate, train
 from yolo.util.utils import save_checkpoint, synchronize
 
+from yolo.util import logging
+
+logger = logging.get_logger(__name__)
+print = logger.info
+
 
 def parse():
     parser = argparse.ArgumentParser(description='PyTorch YOLOv3 Training')
@@ -58,6 +63,13 @@ def main():
     global best_ap50, best_ap50_95, args
 
     args = parse()
+    # load cfg
+    with open(args.cfg, 'r') as f:
+        import yaml
+
+        cfg = yaml.safe_load(f)
+
+    logging.setup_logging(local_rank=args.local_rank, output_dir=cfg.OUTPUT_DIR)
     print("opt_level = {}".format(args.opt_level))
     print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
     print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
@@ -87,12 +99,6 @@ def main():
         args.world_size = torch.distributed.get_world_size()
 
     assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
-
-    # load cfg
-    with open(args.cfg, 'r') as f:
-        import yaml
-
-        cfg = yaml.safe_load(f)
 
     # create model
     device = torch.device(f'cuda:{args.local_rank}' if args.world_size > 1 or args.gpu > 0 else 'cpu')

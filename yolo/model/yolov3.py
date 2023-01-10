@@ -9,11 +9,18 @@
 from typing import Dict
 from collections import OrderedDict
 
+import os
+
 import torch
 from torch import nn
 
 from darknet.darknet import ConvBNAct, ResBlock, DownSample
 from .yololayer import YOLOLayer
+
+from yolo.util import logging
+
+logger = logging.get_logger(__name__)
+print = logger.info
 
 
 class Backbone(nn.Module):
@@ -126,9 +133,9 @@ class YOLOv3(nn.Module):
         self.neck = Neck()
         self.head = Head(cfg)
 
-        self._init()
+        self._init(ckpt_path=cfg['BACKBONE_PRETRAINED'])
 
-    def _init(self):
+    def _init(self, ckpt_path=None):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
@@ -140,13 +147,14 @@ class YOLOv3(nn.Module):
                 nn.init.normal_(m.weight, 0, 0.01)
                 # nn.init.constant_(m.weight, 0.01)
                 nn.init.constant_(m.bias, 0)
+        if ckpt_path is not None and os.path.isfile(ckpt_path):
+            print(f'Loading pretrained darknet53: {ckpt_path}')
 
-        ckpt_path = "darknet/model_best.pth.tar"
-        print(f'Loading pretrained darknet53: {ckpt_path}')
-        ckpt = torch.load(ckpt_path, map_location='cpu')['state_dict']
-        ckpt = OrderedDict({key: ckpt[key] for key in list(filter(lambda x: 'backbone' in x, ckpt.keys()))})
-        ckpt = OrderedDict({key.replace("module.backbone.", ""): value for key, value in ckpt.items()})
-        self.backbone.load_state_dict(ckpt, strict=True)
+            ckpt = torch.load(ckpt_path, map_location='cpu')['state_dict']
+            ckpt = OrderedDict({key: ckpt[key] for key in list(filter(lambda x: 'backbone' in x, ckpt.keys()))})
+            ckpt = OrderedDict({key.replace("module.backbone.", ""): value for key, value in ckpt.items()})
+
+            self.backbone.load_state_dict(ckpt, strict=True)
 
     def forward(self, x):
         # x: [B, 3, H, W]

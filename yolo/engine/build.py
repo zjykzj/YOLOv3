@@ -33,6 +33,11 @@ from yolo.optim.lr_schedulers.build import adjust_learning_rate
 from yolo.util.metric import AverageMeter
 from yolo.util.utils import postprocess, yolobox2label
 
+from yolo.util import logging
+
+logger = logging.get_logger(__name__)
+print = logger.info
+
 
 def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epoch=0):
     batch_time = AverageMeter()
