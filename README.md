@@ -46,7 +46,33 @@ of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [NVIDIA/ape
 
 ## Usage
 
-...
+### Train
+
+* One GPU
+
+```shell
+CUDA_VISIBLE_DEVICES=0 python main_amp.py -c config/yolov3_default.cfg --opt-level=O0 COCO
+```
+
+* Multi GPU
+
+```shell
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "32111" main_amp.py -c config/yolov3_default.cfg --opt-level=O0 COCO
+```
+
+### Test
+
+```shell
+python test.py --cfg config/yolov3_default.cfg --checkpoint model_best.pth.tar COCO
+```
+
+### Demo
+
+```shell
+python demo.py --cfg config/yolov3_default.cfg --ckpt model_best.pth.tar --image data/innsbruck.png --detect_thresh 0.5
+```
+
+![](data/innsbruck_output.png)![](data/mountain_output.png)
 
 ## Maintainers
 
