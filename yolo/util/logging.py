@@ -55,6 +55,8 @@ def setup_logging(local_rank, output_dir=None):
 
     # if output_dir is not None and du.is_master_proc():
     if output_dir is not None and local_rank == 0:
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         filename = os.path.join(output_dir, "stdout.log")
         fh = logging.FileHandler(filename)
         fh.setLevel(logging.DEBUG)

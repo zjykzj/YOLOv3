@@ -29,7 +29,6 @@ from yolo.util.utils import save_checkpoint, synchronize
 from yolo.util import logging
 
 logger = logging.get_logger(__name__)
-print = logger.info
 
 
 def parse():
@@ -69,12 +68,12 @@ def main():
 
         cfg = yaml.safe_load(f)
 
-    logging.setup_logging(local_rank=args.local_rank, output_dir=cfg.OUTPUT_DIR)
-    print("opt_level = {}".format(args.opt_level))
-    print("keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32), type(args.keep_batchnorm_fp32))
-    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
+    logging.setup_logging(local_rank=args.local_rank, output_dir=cfg['TRAIN']['OUTPUT_DIR'])
+    logger.info("opt_level = {}".format(args.opt_level))
+    logger.info("keep_batchnorm_fp32 = {} {}".format(args.keep_batchnorm_fp32, type(args.keep_batchnorm_fp32)))
+    logger.info("loss_scale = {} {}".format(args.loss_scale, type(args.loss_scale)))
 
-    print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
+    logger.info("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
     best_ap50 = 0
@@ -102,7 +101,7 @@ def main():
 
     # create model
     device = torch.device(f'cuda:{args.local_rank}' if args.world_size > 1 or args.gpu > 0 else 'cpu')
-    print("device:", device)
+    logger.info("device: {}".format(device))
     model = build_model(args, cfg).to(device)
 
     # Scale learning rate based on global batch size
@@ -140,7 +139,7 @@ def main():
         # Use a local scope to avoid dangling references
         def resume():
             if os.path.isfile(args.resume):
-                print("=> loading checkpoint '{}'".format(args.resume))
+                logger.info("=> loading checkpoint '{}'".format(args.resume))
                 checkpoint = torch.load(args.resume, map_location=device)
                 # checkpoint = torch.load(args.resume, map_location=lambda storage, loc: storage.cuda(args.gpu))
                 start_epoch = checkpoint['epoch']
@@ -157,9 +156,9 @@ def main():
                 if hasattr(checkpoint, 'lr_scheduler'):
                     lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
 
-                print("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
+                logger.info("=> loaded checkpoint '{}' (epoch {})".format(args.resume, checkpoint['epoch']))
             else:
-                print("=> no checkpoint found at '{}'".format(args.resume))
+                logger.info("=> no checkpoint found at '{}'".format(args.resume))
 
         resume()
 
@@ -169,20 +168,20 @@ def main():
     conf_thresh = cfg['TEST']['CONFTHRE']
     nms_thresh = float(cfg['TEST']['NMSTHRE'])
     if args.evaluate and args.local_rank == 0:
-        print("Begin evaluating ...")
+        logger.info("Begin evaluating ...")
         # ap50_95, ap50 = evaluator.evaluate(model)
         validate(val_loader, model, conf_thresh, nms_thresh, device=device)
         return
 
-    if args.local_rank == 0:
-        print("args:", args)
-        print("cfg:", cfg)
+    logger.info("args: {}".format(args))
+    logger.info("cfg: {}".format(cfg))
 
     is_warmup = cfg['LR_SCHEDULER']['IS_WARMUP']
     warmup_epoch = int(cfg['LR_SCHEDULER']['WARMUP_EPOCH'])
 
     # pytorch-accurate time
     synchronize()
+    # Note: epoch begin from 0
     for epoch in range(start_epoch, max_epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
@@ -191,7 +190,7 @@ def main():
         start = time.time()
         train(args, cfg, train_loader, model, criterion, optimizer, device=device, epoch=epoch)
         # pytorch-accurate time
-        end = time.time()
+        logger.info("One epoch train need: {:.3f}".format((time.time() - start)))
         synchronize()
 
         if is_warmup and epoch < warmup_epoch:
@@ -201,19 +200,18 @@ def main():
 
         # save checkpoint
         if args.local_rank == 0:
-            print("One epoch train need: {:.3f}".format((end - start)))
-
             # evaluate on validation set
-            print("Begin evaluating ...")
+            logger.info("Begin evaluating ...")
             start = time.time()
             ap50_95, ap50 = validate(val_loader, model, conf_thresh, nms_thresh, device=device)
-            print("One epoch validate need: {:.3f}".format((time.time() - start)))
+            logger.info("One epoch validate need: {:.3f}".format((time.time() - start)))
 
             # save checkpoint
             is_best = ap50 > best_ap50
             if is_best:
                 best_ap50 = ap50
                 best_ap50_95 = ap50_95
+
             save_checkpoint({
                 'epoch': epoch + 1,
                 'ap50': ap50,
@@ -223,7 +221,7 @@ def main():
                 'state_dict': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'lr_scheduler': lr_scheduler.state_dict()
-            }, is_best)
+            }, is_best, output_dir=cfg['TRAIN']['OUTPUT_DIR'])
 
         synchronize()
 

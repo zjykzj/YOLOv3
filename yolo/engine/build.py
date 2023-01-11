@@ -36,7 +36,6 @@ from yolo.util.utils import postprocess, yolobox2label
 from yolo.util import logging
 
 logger = logging.get_logger(__name__)
-print = logger.info
 
 
 def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epoch=0):
@@ -69,7 +68,7 @@ def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epo
             optimizer.step()
             optimizer.zero_grad()
 
-        if i % args.print_freq == 0:
+        if (i + 1) % args.print_freq == 0:
             # Every print_freq iterations, check the loss, accuracy, and speed.
             # For best performance, it doesn't make sense to print these metrics every
             # iteration, since they incur an allreduce and some host<->device syncs.
@@ -89,20 +88,19 @@ def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epo
 
             img_size = train_loader.dataset.get_img_size()
             current_lr = optimizer.state_dict()['param_groups'][0]['lr']
-            if args.local_rank == 0:
-                print('Epoch: [{0}][{1}/{2}]\t'
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Speed {3:.3f} ({4:.3f})\t'
-                      'Lr {5:.8f}\t'
-                      'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
-                      'ImgSize: {6}x{6}\t'.format(
-                    epoch, i, len(train_loader),
-                    args.world_size * float(cfg['DATA']['BATCH_SIZE']) / batch_time.val,
-                    args.world_size * float(cfg['DATA']['BATCH_SIZE']) / batch_time.avg,
-                    current_lr,
-                    img_size,
-                    batch_time=batch_time,
-                    loss=losses))
+            logger.info('Epoch: [{0}][{1}/{2}]\t'
+                        'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                        'Speed {3:.3f} ({4:.3f})\t'
+                        'Lr {5:.8f}\t'
+                        'Loss {loss.val:.10f} ({loss.avg:.4f})\t'
+                        'ImgSize: {6}x{6}\t'.format(
+                (epoch + 1), (i + 1), len(train_loader),
+                args.world_size * float(cfg['DATA']['BATCH_SIZE']) / batch_time.val,
+                args.world_size * float(cfg['DATA']['BATCH_SIZE']) / batch_time.avg,
+                current_lr,
+                img_size,
+                batch_time=batch_time,
+                loss=losses))
 
             # 每隔10轮都重新指定输入图像大小
             img_size = (random.randint(0, 9) % 10 + 10) * 32
@@ -167,7 +165,7 @@ def validate(val_loader, model, conf_threshold, nms_threshold, device=None):
         batch_time.update(time.time() - end)
         end = time.time()
 
-    print('Time {batch_time.val:.3f} ({batch_time.avg:.3f})'.format(batch_time=batch_time))
+    logger.info('Time {batch_time.val:.3f} ({batch_time.avg:.3f})'.format(batch_time=batch_time))
 
     annType = ['segm', 'bbox', 'keypoints']
 
