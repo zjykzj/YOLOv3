@@ -173,8 +173,8 @@ def main():
         validate(val_loader, model, conf_thresh, nms_thresh, device=device)
         return
 
-    logger.info("args: {}".format(args))
-    logger.info("cfg: {}".format(cfg))
+    logger.info("\nargs: {}".format(args))
+    logger.info("\ncfg: {}".format(cfg))
 
     is_warmup = cfg['LR_SCHEDULER']['IS_WARMUP']
     warmup_epoch = int(cfg['LR_SCHEDULER']['WARMUP_EPOCH'])
