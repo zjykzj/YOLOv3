@@ -54,7 +54,7 @@ def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epo
     assert hasattr(train_loader.dataset, 'set_img_size')
     optimizer.zero_grad()
     for i, (input, target) in enumerate(train_loader):
-        if is_warmup and epoch < warmup_epoch + 1:
+        if is_warmup and epoch < warmup_epoch:
             adjust_learning_rate(cfg, optimizer, epoch, i, len(train_loader))
 
         # compute output

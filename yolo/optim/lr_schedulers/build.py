@@ -20,7 +20,7 @@ def adjust_learning_rate(cfg: Dict, optimizer: Optimizer, epoch: int, step: int,
 
     warmup_epoch = int(cfg['LR_SCHEDULER']['WARMUP_EPOCH'])
     # Warmup
-    if epoch < warmup_epoch + 1:
+    if epoch < warmup_epoch:
         lr = lr * float(1 + step + epoch * len_epoch) / (warmup_epoch * len_epoch)
 
     for param_group in optimizer.param_groups:
