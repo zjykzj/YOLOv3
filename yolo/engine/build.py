@@ -45,25 +45,29 @@ def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epo
 
     is_warmup = cfg['LR_SCHEDULER']['IS_WARMUP']
     warmup_epoch = cfg['LR_SCHEDULER']['WARMUP_EPOCH']
+    accumulation_steps = cfg['TRAIN']['ACCUMULATION_STEPS']
 
     # switch to train mode
     model.train()
     end = time.time()
 
     assert hasattr(train_loader.dataset, 'set_img_size')
+    optimizer.zero_grad()
     for i, (input, target) in enumerate(train_loader):
         if is_warmup and epoch < warmup_epoch + 1:
             adjust_learning_rate(cfg, optimizer, epoch, i, len(train_loader))
 
         # compute output
         output = model(input.to(device))
-        loss = criterion(output, target)
+        loss = criterion(output, target) / accumulation_steps
 
         # compute gradient and do SGD step
-        optimizer.zero_grad()
         with amp.scale_loss(loss, optimizer) as scaled_loss:
             scaled_loss.backward()
-        optimizer.step()
+
+        if (i + 1) % accumulation_steps == 0 or (i + 1) == len(train_loader):
+            optimizer.step()
+            optimizer.zero_grad()
 
         if i % args.print_freq == 0:
             # Every print_freq iterations, check the loss, accuracy, and speed.

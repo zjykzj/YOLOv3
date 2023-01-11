@@ -106,7 +106,8 @@ def main():
     model = build_model(args, cfg).to(device)
 
     # Scale learning rate based on global batch size
-    cfg['OPTIMIZER']['LR'] = float(cfg['OPTIMIZER']['LR']) * float(cfg['DATA']['BATCH_SIZE'] * args.world_size) / 64.
+    cfg['OPTIMIZER']['LR'] = float(cfg['OPTIMIZER']['LR']) * float(
+        cfg['DATA']['BATCH_SIZE'] * cfg['TRAIN']['ACCUMULATION_STEPS'] * args.world_size) / 64.
     optimizer = build_optimizer(cfg, model)
     # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
     # for convenient interoperation with argparse.
@@ -165,9 +166,7 @@ def main():
     # Data loading code
     train_sampler, train_loader, val_loader = build_data(args, cfg)
 
-    # conf_thresh = cfg['TEST']['CONFTHRE']
-    conf_thresh = 0.005
-    # conf_thresh = 0.5
+    conf_thresh = cfg['TEST']['CONFTHRE']
     nms_thresh = float(cfg['TEST']['NMSTHRE'])
     if args.evaluate and args.local_rank == 0:
         print("Begin evaluating ...")
