@@ -26,7 +26,7 @@ class ConvBNAct(nn.Module):
                               padding=pad,
                               bias=False)
         self.norm = nn.BatchNorm2d(out_ch)
-        self.act = nn.LeakyReLU(0.1)
+        self.act = nn.LeakyReLU(0.1, inplace=True)
 
     def forward(self, x):
         x = self.conv(x)
