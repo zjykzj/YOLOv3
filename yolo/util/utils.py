@@ -6,6 +6,7 @@
 @author: zj
 @description: 
 """
+import os.path
 
 import torch
 import shutil
@@ -13,10 +14,10 @@ import shutil
 import numpy as np
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar', output_dir='./'):
+    torch.save(state, os.path.join(output_dir, filename))
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(filename, os.path.join(output_dir, 'model_best.pth.tar'))
 
 
 def synchronize():
