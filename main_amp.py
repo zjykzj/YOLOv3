@@ -148,7 +148,10 @@ def main():
                 best_ap50 = checkpoint['ap50']
                 best_ap50_95 = checkpoint['ap50_95']
 
-                state_dict = {key.replace("module.", ""): value for key, value in checkpoint['state_dict'].items()}
+                if args.distributed:
+                    state_dict = {key.replace("module.", ""): value for key, value in checkpoint['state_dict'].items()}
+                else:
+                    state_dict = checkpoint['state_dict']
                 model.load_state_dict(state_dict)
 
                 if hasattr(checkpoint, 'optimizer'):
