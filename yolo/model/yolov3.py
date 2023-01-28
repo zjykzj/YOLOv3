@@ -146,6 +146,7 @@ class YOLOv3(nn.Module):
                 nn.init.normal_(m.weight, 0, 0.01)
                 # nn.init.constant_(m.weight, 0.01)
                 nn.init.constant_(m.bias, 0)
+
         if ckpt_path is not None and os.path.isfile(ckpt_path):
             logger.info(f'Loading pretrained darknet53: {ckpt_path}')
 
