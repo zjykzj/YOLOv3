@@ -66,7 +66,7 @@ def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epo
             optimizer.zero_grad()
 
             if is_warmup and epoch < warmup_epoch:
-                adjust_learning_rate(cfg, optimizer, epoch, i, len(train_loader) / accumulation_steps)
+                adjust_learning_rate(cfg, optimizer, epoch, i, len(train_loader))
 
         if (i + 1) % args.print_freq == 0:
             # Every print_freq iterations, check the loss, accuracy, and speed.
