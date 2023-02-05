@@ -53,9 +53,6 @@ def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epo
     assert hasattr(train_loader.dataset, 'set_img_size')
     optimizer.zero_grad()
     for i, (input, target) in enumerate(train_loader):
-        if is_warmup and epoch < warmup_epoch:
-            adjust_learning_rate(cfg, optimizer, epoch, i, len(train_loader))
-
         # compute output
         output = model(input.to(device))
         loss = criterion(output, target) / accumulation_steps
@@ -67,6 +64,9 @@ def train(args, cfg, train_loader, model, criterion, optimizer, device=None, epo
         if (i + 1) % accumulation_steps == 0 or (i + 1) == len(train_loader):
             optimizer.step()
             optimizer.zero_grad()
+
+            if is_warmup and epoch < warmup_epoch:
+                adjust_learning_rate(cfg, optimizer, epoch, i, len(train_loader) / accumulation_steps)
 
         if (i + 1) % args.print_freq == 0:
             # Every print_freq iterations, check the loss, accuracy, and speed.
