@@ -128,7 +128,7 @@ class YOLOLoss(nn.Module):
         assert isinstance(outputs, list)
         loss_list = []
         for output_dict in outputs:
-            # 逐图像进行损失计算
+            # 逐层计算损失
             assert isinstance(output_dict, dict)
             # 获取当前特征层下标
             layer_no = output_dict['layer_no']
