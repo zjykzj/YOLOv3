@@ -3,6 +3,18 @@
 
 ## Benchmark training
 
+### Train
+
+```shell
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "31226" main_amp.py -b 256 --workers 4 --lr 0.1 --weight-decay 1e-4 --epochs 90 --opt-level O1 ./imagenet/
+```
+
+```text
+Prec@1 76.814 Prec@5 93.286
+```
+
+### Recipe
+
 * `Model`: 
   * Type: Darknet53
   * Activation: LeakyReLU (0.1)
@@ -40,16 +52,28 @@
       * Resize: 256
       * CenterCrop: 224
 
+## Enhanced training
+
+### Train
+
 ```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "31226" main_amp.py -b 256 --workers 4 --lr 0.1 --weight-decay 1e-4 --epochs 90 --opt-level O1 ./imagenet/
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "31226" main_amp.py -b 128 --workers 4 --lr 0.1 --weight-decay 1e-4 --epochs 120 --opt-level O1 ./imagenet/
 ```
+
+Set `nn.LeakyReLU(0.01, inplace=True)`
 
 ```text
-Prec@1 76.814 Prec@5 93.286
+Prec@1 78.104 Prec@5 94.042
 ```
 
-## Enhanced training
-    
+Set `nn.LeakyReLU(0.1, inplace=False)`
+
+```text
+Prec@1 77.920 Prec@5 93.810
+```
+
+### Recipe
+
 * `Model`: 
   * Type: Darknet53
   * Activation: LeakyReLU (0.01)
@@ -88,11 +112,3 @@ Prec@1 76.814 Prec@5 93.286
     * `Transform`:
       * Resize: 288
       * CenterCrop: 256
-
-```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "31226" main_amp.py -b 128 --workers 4 --lr 0.1 --weight-decay 1e-4 --epochs 120 --opt-level O1 ./imagenet/
-```
-
-```text
-Prec@1 78.104 Prec@5 94.042
-```
