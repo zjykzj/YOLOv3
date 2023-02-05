@@ -69,14 +69,14 @@ Prec@1 78.104 Prec@5 94.042
 Set `nn.LeakyReLU(0.1, inplace=False)`
 
 ```text
-Prec@1 77.920 Prec@5 93.810
+Prec@1 78.476 Prec@5 94.196
 ```
 
 ### Recipe
 
 * `Model`: 
   * Type: Darknet53
-  * Activation: LeakyReLU (0.01)
+  * Activation: LeakyReLU (0.1)
 * `Train`:
   * Epochs: 120
   * Hybrid train: True
@@ -92,7 +92,7 @@ Prec@1 77.920 Prec@5 93.810
     * `Sampler`:
       * Type: DistributedSampler
     * `Dataloader`:
-      * Batch size: 256
+      * Batch size: 128
       * Num workers: 4
   * `Criterion`: 
     * Type: LabelSmoothingLoss
