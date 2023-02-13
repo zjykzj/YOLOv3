@@ -131,7 +131,7 @@ def main():
         model = DDP(model, delay_allreduce=True)
 
     # define loss function (criterion) and optimizer
-    criterion = build_criterion(cfg).to(device)
+    criterion = build_criterion(cfg, device=device)
 
     start_epoch = int(cfg['TRAIN']['START_EPOCH'])
     max_epochs = int(cfg['TRAIN']['MAX_EPOCHS'])

@@ -28,6 +28,6 @@ def build_model(args: Namespace, cfg: Dict, device=None):
     return model
 
 
-def build_criterion(cfg: Dict):
-    criterion = YOLOLoss(cfg['MODEL'], ignore_thresh=float(cfg['CRITERION']['IGNORE_THRESH']))
+def build_criterion(cfg: Dict, device=None):
+    criterion = YOLOLoss(cfg['MODEL'], ignore_thresh=float(cfg['CRITERION']['IGNORE_THRESH']), device=device).to(device)
     return criterion
