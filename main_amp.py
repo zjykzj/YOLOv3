@@ -102,7 +102,7 @@ def main():
     # create model
     device = torch.device(f'cuda:{args.local_rank}' if args.world_size > 1 or args.gpu > 0 else 'cpu')
     logger.info("device: {}".format(device))
-    model = build_model(args, cfg).to(device)
+    model = build_model(args, cfg, device=device)
 
     # # Scale learning rate based on global batch size
     # cfg['OPTIMIZER']['LR'] = float(cfg['OPTIMIZER']['LR']) * float(

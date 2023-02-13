@@ -16,14 +16,14 @@ from .yolov3 import YOLOv3
 from .yololoss import YOLOLoss
 
 
-def build_model(args: Namespace, cfg: Dict):
+def build_model(args: Namespace, cfg: Dict, device=None):
     if args.channels_last:
         memory_format = torch.channels_last
     else:
         memory_format = torch.contiguous_format
 
-    model = YOLOv3(cfg['MODEL'])
-    model = model.to(memory_format=memory_format)
+    model = YOLOv3(cfg['MODEL'], device=device)
+    model = model.to(memory_format=memory_format, device=device)
 
     return model
 

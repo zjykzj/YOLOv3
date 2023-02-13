@@ -53,7 +53,7 @@ class YOLOLayer(nn.Module):
     # 预先设定的缩放倍数
     strides = [32, 16, 8]
 
-    def __init__(self, cfg, layer_no):
+    def __init__(self, cfg, layer_no, device=None):
         super(YOLOLayer, self).__init__()
 
         # 当前YOLOLayer使用的缩放倍数
@@ -82,7 +82,8 @@ class YOLOLayer(nn.Module):
         #                       out_channels=self.n_anchors * (self.n_classes + 5),
         #                       kernel_size=(1, 1), stride=(1, 1), padding=0)
 
-        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        # self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        self.device = device
 
     def forward(self, output):
         # output = self.conv(x)

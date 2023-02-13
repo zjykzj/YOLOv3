@@ -93,7 +93,7 @@ class Neck(nn.Module):
 
 class Head(nn.Module):
 
-    def __init__(self, cfg: Dict):
+    def __init__(self, cfg: Dict, device=None):
         super(Head, self).__init__()
 
         self.n_classes = cfg['N_CLASSES']
@@ -104,14 +104,14 @@ class Head(nn.Module):
             nn.Conv2d(in_channels=1024,
                       out_channels=output_ch,
                       kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
-            YOLOLayer(cfg, layer_no=0)
+            YOLOLayer(cfg, layer_no=0, device=device)
         )
         self.yolo2 = nn.Sequential(
             ConvBNAct(in_ch=256, out_ch=512, kernel_size=3, stride=1),
             nn.Conv2d(in_channels=512,
                       out_channels=output_ch,
                       kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
-            YOLOLayer(cfg, layer_no=1)
+            YOLOLayer(cfg, layer_no=1, device=device)
         )
         self.yolo3 = nn.Sequential(
             ConvBNAct(in_ch=128, out_ch=256, kernel_size=3, stride=1),
@@ -119,7 +119,7 @@ class Head(nn.Module):
             nn.Conv2d(in_channels=256,
                       out_channels=output_ch,
                       kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
-            YOLOLayer(cfg, layer_no=2)
+            YOLOLayer(cfg, layer_no=2, device=device)
         )
 
     def forward(self, x1, x2, x3):
@@ -137,13 +137,13 @@ class Head(nn.Module):
 
 class YOLOv3(nn.Module):
 
-    def __init__(self, cfg: Dict):
+    def __init__(self, cfg: Dict, device=None):
         super(YOLOv3, self).__init__()
         assert cfg['TYPE'] == 'YOLOv3'
 
         self.backbone = Backbone()
         self.neck = Neck()
-        self.head = Head(cfg)
+        self.head = Head(cfg, device=device)
 
         self._init(ckpt_path=cfg['BACKBONE_PRETRAINED'])
 
