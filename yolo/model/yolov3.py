@@ -95,18 +95,31 @@ class Head(nn.Module):
 
     def __init__(self, cfg: Dict):
         super(Head, self).__init__()
+
+        self.n_classes = cfg['N_CLASSES']
+        output_ch = (4 + 1 + self.n_classes) * 3
+
         self.yolo1 = nn.Sequential(
             ConvBNAct(in_ch=512, out_ch=1024, kernel_size=3, stride=1),
-            YOLOLayer(cfg, layer_no=0, in_ch=1024)
+            nn.Conv2d(in_channels=1024,
+                      out_channels=output_ch,
+                      kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
+            YOLOLayer(cfg, layer_no=0)
         )
         self.yolo2 = nn.Sequential(
             ConvBNAct(in_ch=256, out_ch=512, kernel_size=3, stride=1),
-            YOLOLayer(cfg, layer_no=1, in_ch=512)
+            nn.Conv2d(in_channels=512,
+                      out_channels=output_ch,
+                      kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
+            YOLOLayer(cfg, layer_no=1)
         )
         self.yolo3 = nn.Sequential(
             ConvBNAct(in_ch=128, out_ch=256, kernel_size=3, stride=1),
             ResBlock(ch=256, num_blocks=2, shortcut=False),
-            YOLOLayer(cfg, layer_no=2, in_ch=256)
+            nn.Conv2d(in_channels=256,
+                      out_channels=output_ch,
+                      kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
+            YOLOLayer(cfg, layer_no=2)
         )
 
     def forward(self, x1, x2, x3):
