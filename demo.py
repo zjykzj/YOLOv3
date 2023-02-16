@@ -134,7 +134,7 @@ def show_bbox(args: Namespace, img_raw: ndarray, bboxes: List, classes: List, co
         import matplotlib
         matplotlib.use('Agg')
 
-    from yolo.utils.vis_bbox import vis_bbox
+    from yolo.util.vis_bbox import vis_bbox
     import matplotlib.pyplot as plt
 
     vis_bbox(
