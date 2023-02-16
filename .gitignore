@@ -220,3 +220,4 @@ dmypy.json
 cython_debug/
 
 /weights/
+/outputs/
