@@ -68,7 +68,7 @@ def main():
     # Initiate model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # YOLOv3还是通过模型定义方式获取YOLO模型！！！
-    model = YOLOv3(cfg['MODEL']).to(device)
+    model = YOLOv3(cfg['MODEL'], device=device).to(device)
 
     # 预训练权重加载，共两种方式
     if args.checkpoint:

@@ -28,7 +28,7 @@ def parse_args():
                         help='path to the check point file')
     parser.add_argument('--image', type=str)
     parser.add_argument('--background', action='store_true',
-                        default=False, help='background(no-display mode. save "./output.png")')
+                        default=False, help='background(no-display mode. save "./mountain_output.png")')
     parser.add_argument('--detect_thresh', type=float,
                         default=None, help='confidence threshold')
     args = parser.parse_args()
@@ -70,7 +70,7 @@ def model_init(args: Namespace, cfg: Dict):
     创建模型，赋值预训练权重
     """
     device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
-    model = YOLOv3(cfg['MODEL']).to(device)
+    model = YOLOv3(cfg['MODEL'], device=device).to(device)
     assert args.ckpt, '--ckpt must be specified'
 
     if args.ckpt:
@@ -143,7 +143,7 @@ def show_bbox(args: Namespace, img_raw: ndarray, bboxes: List, classes: List, co
     plt.show()
 
     if args.background:
-        plt.savefig('output.png')
+        plt.savefig('mountain_output.png')
 
 
 def main():
