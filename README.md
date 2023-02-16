@@ -19,8 +19,8 @@ The input size is `416`, the confidence threshold is `0.005`, and the reasoning 
 
 <table><tbody>
 <tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> Original (darknet) </td><td bgcolor=white> DeNA/PyTorch_YOLOv3 </td><td bgcolor=white> Ours (pytorch) </td></tr>
-<tr><th align="left" bgcolor=#f8f8f8> COCO AP[IoU=0.50:0.95], inference</th> <td bgcolor=white> 0.310 </td><td bgcolor=white> 0.311 </td><td bgcolor=white> 0.286 </td></tr>
-<tr><th align="left" bgcolor=#f8f8f8> COCO AP[IoU=0.50],      inference</th> <td bgcolor=white> 0.553 </td><td bgcolor=white> 0.558 </td><td bgcolor=white> 0.509 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> COCO AP[IoU=0.50:0.95], inference</th> <td bgcolor=white> 0.310 </td><td bgcolor=white> 0.311 </td><td bgcolor=white> 0.292 </td></tr>
+<tr><th align="left" bgcolor=#f8f8f8> COCO AP[IoU=0.50],      inference</th> <td bgcolor=white> 0.553 </td><td bgcolor=white> 0.558 </td><td bgcolor=white> 0.512 </td></tr>
 </table></tbody>
 
 ## Table of Contents
@@ -67,28 +67,28 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node
 ### Test
 
 ```shell
-python test.py --cfg config/yolov3_default.cfg --checkpoint model_best.pth.tar COCO
+python test.py --cfg config/yolov3_default.cfg --checkpoint outputs/yolov3_default/checkpoint_91.pth.tar COCO
 ```
 
 ```text
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.286
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.509
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.291
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.116
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.302
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.431
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.252
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.391
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.414
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.220
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.446
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.569
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.292
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.512
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.300
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.117
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.311
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.444
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.256
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.390
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.411
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.215
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.443
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.573
 ```
 
 ### Demo
 
 ```shell
-python demo.py --cfg config/yolov3_default.cfg --ckpt model_best.pth.tar --image data/innsbruck.png --detect_thresh 0.5
+python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/checkpoint_91.pth.tar --image data/innsbruck.png --detect_thresh 0.5 --background
 ```
 
 <p align="left"><img src="data/innsbruck_output.png" height="160"\>  <img src="data/mountain_output.png" height="160"\></p>
