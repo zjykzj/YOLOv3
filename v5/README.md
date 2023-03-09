@@ -1,6 +1,14 @@
 
 # README.md
 
+## train
+
+```shell
+python -m torch.distributed.run --nproc_per_node=3 --master_port=31322 train.py --batch 24 --data coco.yaml --weights "" --cfg yolov3.yaml --device 0,1,2
+```
+
+## val
+
 ```shell
 $ python val.py --weights ~/pp/yolov5/runs/train/exp12/weights/best.pt --data data/coco.yaml 
 val: data=data/coco.yaml, weights=['/home/zj/pp/yolov5/runs/train/exp12/weights/best.pt'], batch_size=32, imgsz=640, conf_thres=0.001, iou_thres=0.6, max_det=300, task=val, device=, workers=8, single_cls=False, augment=False, verbose=False, save_txt=False, save_hybrid=False, save_conf=False, save_json=True, project=runs/val, name=exp, exist_ok=False, half=False, dnn=False
