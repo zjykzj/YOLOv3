@@ -15,7 +15,7 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
-<style type="text/css">
+<!-- <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
 .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
   overflow:hidden;padding:10px 5px;word-break:normal;}
@@ -23,7 +23,7 @@
   font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
 .tg .tg-c3ow{border-color:inherit;text-align:center;vertical-align:top}
 .tg .tg-7btt{border-color:inherit;font-weight:bold;text-align:center;vertical-align:top}
-</style>
+</style> -->
 <table class="tg">
 <thead>
   <tr>
@@ -101,6 +101,9 @@
 - [Background](#background)
 - [Installation](#installation)
 - [Usage](#usage)
+  - [Train](#train)
+  - [Test](#test)
+  - [Demo](#demo)
 - [Maintainers](#maintainers)
 - [Thanks](#thanks)
 - [Contributing](#contributing)
@@ -174,6 +177,7 @@ python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/che
 * [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3)
 * [NVIDIA/apex](https://github.com/NVIDIA/apex)
 * [ZJCV/ZCls2](https://github.com/ZJCV/ZCls2)
+* [ultralytics/yolov5](https://github.com/ultralytics/yolov5)
 
 ## Contributing
 
