@@ -15,13 +15,85 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
-The input size is `416`, the confidence threshold is `0.005`, and the reasoning result of COCO val dataset is as follows:
-
-<table><tbody>
-<tr><th align="left" bgcolor=#f8f8f8> </th>     <td bgcolor=white> Original (darknet) </td><td bgcolor=white> DeNA/PyTorch_YOLOv3 </td><td bgcolor=white> Ours (pytorch) </td><td bgcolor=white> ultralytics/yolov5 </td></>
-<tr><th align="left" bgcolor=#f8f8f8> COCO AP[IoU=0.50:0.95], inference</th> <td bgcolor=white> 0.310 </td><td bgcolor=white> 0.311 </td><td bgcolor=white> 0.292 </td><td bgcolor=white> 0.442 </td></tr>
-<tr><th align="left" bgcolor=#f8f8f8> COCO AP[IoU=0.50],      inference</th> <td bgcolor=white> 0.553 </td><td bgcolor=white> 0.558 </td><td bgcolor=white> 0.512 </td><td bgcolor=white> 0.642 </td></tr>
-</table></tbody>
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-c3ow{border-color:inherit;text-align:center;vertical-align:top}
+.tg .tg-7btt{border-color:inherit;font-weight:bold;text-align:center;vertical-align:top}
+</style>
+<table class="tg">
+<thead>
+  <tr>
+    <th class="tg-c3ow"></th>
+    <th class="tg-7btt"><span style="font-style:normal">Original (darknet)</span></th>
+    <th class="tg-7btt">DeNA/PyTorch_YOLOv3</th>
+    <th class="tg-7btt"><span style="font-style:normal">ultralytics/yolov3</span></th>
+    <th class="tg-7btt"><span style="font-style:normal">ultralytics/yolov3-tiny</span></th>
+    <th class="tg-7btt"><span style="font-style:normal">ultralytics/yolov3-spp</span></th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-7btt">dataset</td>
+    <td class="tg-c3ow">coco 2017 train/val</td>
+    <td class="tg-c3ow">coco 2017 train/val</td>
+    <td class="tg-c3ow">coco 2017 train/val</td>
+    <td class="tg-c3ow">coco 2017 train/val</td>
+    <td class="tg-c3ow">coco 2017 train/val</td>
+  </tr>
+  <tr>
+    <td class="tg-7btt">train epoch</td>
+    <td class="tg-c3ow">300</td>
+    <td class="tg-c3ow">300</td>
+    <td class="tg-c3ow">100</td>
+    <td class="tg-c3ow">100</td>
+    <td class="tg-c3ow">100</td>
+  </tr>
+  <tr>
+    <td class="tg-7btt">COCO AP[IoU=0.50:0.95], inference</td>
+    <td class="tg-c3ow">0.310</td>
+    <td class="tg-c3ow">0.311</td>
+    <td class="tg-c3ow">0.442</td>
+    <td class="tg-c3ow">0.180</td>
+    <td class="tg-7btt">0.447</td>
+  </tr>
+  <tr>
+    <td class="tg-c3ow"><span style="font-weight:600;font-style:normal">COCO AP[IoU=0.50], inference</span></td>
+    <td class="tg-c3ow">0.553</td>
+    <td class="tg-c3ow">0.558</td>
+    <td class="tg-c3ow">0.642</td>
+    <td class="tg-c3ow">0.347</td>
+    <td class="tg-7btt">0.645</td>
+  </tr>
+  <tr>
+    <td class="tg-7btt">conf_thre</td>
+    <td class="tg-c3ow">/</td>
+    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.005</span></td>
+    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.001</span></td>
+    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.001</span></td>
+    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.001</span></td>
+  </tr>
+  <tr>
+    <td class="tg-7btt">nms_thre</td>
+    <td class="tg-c3ow">/</td>
+    <td class="tg-c3ow">0.45</td>
+    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.6</span></td>
+    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.6</span></td>
+    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.6</span></td>
+  </tr>
+  <tr>
+    <td class="tg-7btt">input_size</td>
+    <td class="tg-c3ow">416</td>
+    <td class="tg-c3ow">416</td>
+    <td class="tg-c3ow">640</td>
+    <td class="tg-c3ow">640</td>
+    <td class="tg-c3ow">640</td>
+  </tr>
+</tbody>
+</table>
 
 ## Table of Contents
 
