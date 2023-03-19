@@ -15,6 +15,8 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
+300 rounds of training on the coco 2017 train dataset, and validation on the coco 2017 val dataset.
+
 <!-- <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
 .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
@@ -37,52 +39,36 @@
 </thead>
 <tbody>
   <tr>
-    <td class="tg-7btt">dataset</td>
-    <td class="tg-c3ow">coco 2017 train/val</td>
-    <td class="tg-c3ow">coco 2017 train/val</td>
-    <td class="tg-c3ow">coco 2017 train/val</td>
-    <td class="tg-c3ow">coco 2017 train/val</td>
-    <td class="tg-c3ow">coco 2017 train/val</td>
-  </tr>
-  <tr>
-    <td class="tg-7btt">train epoch</td>
-    <td class="tg-c3ow">300</td>
-    <td class="tg-c3ow">300</td>
-    <td class="tg-c3ow">100</td>
-    <td class="tg-c3ow">100</td>
-    <td class="tg-c3ow">100</td>
-  </tr>
-  <tr>
     <td class="tg-7btt">COCO AP[IoU=0.50:0.95], inference</td>
     <td class="tg-c3ow">0.310</td>
     <td class="tg-c3ow">0.311</td>
-    <td class="tg-c3ow">0.442</td>
-    <td class="tg-c3ow">0.180</td>
-    <td class="tg-7btt">0.447</td>
+    <td class="tg-c3ow">0.450</td>
+    <td class="tg-c3ow">0.186</td>
+    <td class="tg-7btt">0.463</td>
   </tr>
   <tr>
-    <td class="tg-c3ow"><span style="font-weight:600;font-style:normal">COCO AP[IoU=0.50], inference</span></td>
+    <td class="tg-7btt">COCO AP[IoU=0.50], inference</td>
     <td class="tg-c3ow">0.553</td>
     <td class="tg-c3ow">0.558</td>
-    <td class="tg-c3ow">0.642</td>
-    <td class="tg-c3ow">0.347</td>
-    <td class="tg-7btt">0.645</td>
+    <td class="tg-c3ow">0.644</td>
+    <td class="tg-c3ow">0.354</td>
+    <td class="tg-7btt">0.657</td>
   </tr>
   <tr>
     <td class="tg-7btt">conf_thre</td>
     <td class="tg-c3ow">/</td>
-    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.005</span></td>
-    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.001</span></td>
-    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.001</span></td>
-    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.001</span></td>
+    <td class="tg-c3ow">0.005</td>
+    <td class="tg-c3ow">0.001</td>
+    <td class="tg-c3ow">0.001</td>
+    <td class="tg-7btt">0.001</td>
   </tr>
   <tr>
     <td class="tg-7btt">nms_thre</td>
     <td class="tg-c3ow">/</td>
     <td class="tg-c3ow">0.45</td>
-    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.6</span></td>
-    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.6</span></td>
-    <td class="tg-c3ow"><span style="font-weight:400;font-style:normal">0.6</span></td>
+    <td class="tg-c3ow">0.6</td>
+    <td class="tg-c3ow">0.6</td>
+    <td class="tg-7btt">0.6</td>
   </tr>
   <tr>
     <td class="tg-7btt">input_size</td>
