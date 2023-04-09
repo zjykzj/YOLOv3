@@ -68,7 +68,7 @@ def resize_and_pad(src_img, bboxes, dst_size, jitter_ratio=0.0, random_replacing
 
 
 def left_right_flip(img, bboxes):
-    dst_img = np.flip(img, axis=2).copy()
+    dst_img = cv2.flip(img, 1)
 
     if len(bboxes) > 0:
         h, w = img.shape[:2]
@@ -161,3 +161,13 @@ class Transform(object):
             assert np.all(bboxes <= img_size), print(img_info, '\n', bboxes)
 
         return img, bboxes, img_info
+
+
+if __name__ == '__main__':
+    image_path = '../../data/innsbruck.png'
+    src_img = cv2.imread(image_path)
+
+    dst_img, bboxes = left_right_flip(src_img, [])
+    cv2.imshow('src', src_img)
+    cv2.imshow('dst', dst_img)
+    cv2.waitKey(0)
