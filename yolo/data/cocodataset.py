@@ -103,6 +103,16 @@ class COCODataset(Dataset):
 
         # 读取图像
         img = cv2.imread(img_file)
+
+        # import copy
+        # src_img = copy.deepcopy(img)
+        # for box in labels:
+        #     x_min, y_min, box_w, box_h = box[1:]
+        #     cv2.rectangle(src_img, (int(x_min), int(y_min)), (int(x_min + box_w), int(y_min + box_h)),
+        #                   (0, 0, 255), 1)
+        # # cv2.imshow('src_img', src_img)
+        # cv2.imwrite('src_img.jpg', src_img)
+
         # 图像预处理
         if self.transform is not None:
             if len(labels) > 0:
@@ -114,6 +124,17 @@ class COCODataset(Dataset):
         img_info.append(img_id)
         img_info.append(index)
         assert np.all(bboxes <= self.img_size), print(img_info, '\n', bboxes)
+
+        # dst_img = copy.deepcopy(img).astype(np.uint8)
+        # dst_img = cv2.cvtColor(dst_img, cv2.COLOR_RGB2BGR)
+        # for box in bboxes:
+        #     x_min, y_min, box_w, box_h = box
+        #     cv2.rectangle(dst_img, (int(x_min), int(y_min)), (int(x_min + box_w), int(y_min + box_h)),
+        #                   (0, 0, 255), 1)
+        # # cv2.imshow('dst_img', dst_img)
+        # # cv2.waitKey(0)
+        # cv2.imwrite("dst_img.jpg", dst_img)
+
         # 数据预处理
         img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
 
@@ -145,13 +166,22 @@ class COCODataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = COCODataset("COCO", name='train2017', img_size=608, is_train=True)
-    # dataset = COCODataset("COCO", name='val2017', img_size=416, is_train=False)
+    cfg = '../../config/yolov3_default.cfg'
+    with open(cfg, 'r') as f:
+        import yaml
 
-    # img, target = dataset.__getitem__(333)
+        cfg = yaml.safe_load(f)
+
+    from yolo.data.transform import Transform
+    # train_transform = Transform(cfg, is_train=True)
+    # dataset = COCODataset("COCO", name='train2017', img_size=608, is_train=True, transform=train_transform)
+    val_transform = Transform(cfg, is_train=False)
+    dataset = COCODataset("COCO", name='val2017', img_size=416, is_train=False, transform=val_transform)
+
+    img, target = dataset.__getitem__(333)
     # img, target = dataset.__getitem__(57756)
     # img, target = dataset.__getitem__(87564)
-    img, target = dataset.__getitem__(51264)
+    # img, target = dataset.__getitem__(51264)
     print(img.shape)
     padded_labels = target['padded_labels']
     img_info = target['img_info']
