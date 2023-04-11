@@ -15,7 +15,7 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
-300 rounds of training on the coco 2017 train dataset, and validation on the coco 2017 val dataset.
+* Verify using Coco val2017.
 
 <!-- <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
@@ -32,9 +32,7 @@
     <th class="tg-c3ow"></th>
     <th class="tg-7btt"><span style="font-style:normal">Original (darknet)</span></th>
     <th class="tg-7btt">DeNA/PyTorch_YOLOv3</th>
-    <th class="tg-7btt"><span style="font-style:normal">ultralytics/yolov3</span></th>
-    <th class="tg-7btt"><span style="font-style:normal">ultralytics/yolov3-tiny</span></th>
-    <th class="tg-7btt"><span style="font-style:normal">ultralytics/yolov3-spp</span></th>
+    <th class="tg-7btt">My</th>
   </tr>
 </thead>
 <tbody>
@@ -42,41 +40,31 @@
     <td class="tg-7btt">COCO AP[IoU=0.50:0.95], inference</td>
     <td class="tg-c3ow">0.310</td>
     <td class="tg-c3ow">0.311</td>
-    <td class="tg-c3ow">0.450</td>
-    <td class="tg-c3ow">0.186</td>
-    <td class="tg-7btt">0.463</td>
+    <td class="tg-c3ow">0.315</td>
   </tr>
   <tr>
     <td class="tg-7btt">COCO AP[IoU=0.50], inference</td>
     <td class="tg-c3ow">0.553</td>
     <td class="tg-c3ow">0.558</td>
-    <td class="tg-c3ow">0.644</td>
-    <td class="tg-c3ow">0.354</td>
-    <td class="tg-7btt">0.657</td>
+    <td class="tg-c3ow">0.543</td>
   </tr>
   <tr>
     <td class="tg-7btt">conf_thre</td>
     <td class="tg-c3ow">/</td>
     <td class="tg-c3ow">0.005</td>
-    <td class="tg-c3ow">0.001</td>
-    <td class="tg-c3ow">0.001</td>
-    <td class="tg-7btt">0.001</td>
+    <td class="tg-c3ow">0.005</td>
   </tr>
   <tr>
     <td class="tg-7btt">nms_thre</td>
     <td class="tg-c3ow">/</td>
     <td class="tg-c3ow">0.45</td>
-    <td class="tg-c3ow">0.6</td>
-    <td class="tg-c3ow">0.6</td>
-    <td class="tg-7btt">0.6</td>
+    <td class="tg-c3ow">0.45</td>
   </tr>
   <tr>
     <td class="tg-7btt">input_size</td>
     <td class="tg-c3ow">416</td>
     <td class="tg-c3ow">416</td>
-    <td class="tg-c3ow">640</td>
-    <td class="tg-c3ow">640</td>
-    <td class="tg-c3ow">640</td>
+    <td class="tg-c3ow">416</td>
   </tr>
 </tbody>
 </table>
@@ -128,22 +116,22 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node
 ### Test
 
 ```shell
-python test.py --cfg config/yolov3_default.cfg --checkpoint outputs/yolov3_default/checkpoint_91.pth.tar COCO
+CUDA_VISIBLE_DEVICES=1 python eval.py --cfg config/yolov3_default.cfg --checkpoint outputs/yolov3_default/checkpoint_79.pth.tar COCO
 ```
 
 ```text
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.292
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.512
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.300
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.117
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.311
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.444
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.256
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.390
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.411
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.215
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.443
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.573
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.315
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.543
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.327
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.132
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.344
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.470
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.271
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.415
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.439
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.239
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.473
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.597
 ```
 
 ### Demo
