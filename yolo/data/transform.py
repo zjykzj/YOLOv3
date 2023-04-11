@@ -151,6 +151,7 @@ class Transform(object):
             assert np.all(bboxes <= img_size), print(img_info, '\n', bboxes)
             # 然后进行左右翻转
             if self.is_flip and np.random.randn() > 0.5:
+            # img_info = []
                 img, bboxes = left_right_flip(img, bboxes)
             # 最后进行颜色抖动
             if self.color_jitter:
