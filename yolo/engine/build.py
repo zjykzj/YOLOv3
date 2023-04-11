@@ -177,7 +177,7 @@ def validate(val_loader, model, conf_threshold, nms_threshold, device=None):
         _, tmp = tempfile.mkstemp()
         json.dump(data_list, open(tmp, 'w'))
         cocoDt = cocoGt.loadRes(tmp)
-        cocoEval = COCOeval(val_loader.dataset.coco, cocoDt, annType[1])
+        cocoEval = COCOeval(cocoGt, cocoDt, annType[1])
         cocoEval.params.imgIds = ids
         cocoEval.evaluate()
         cocoEval.accumulate()
