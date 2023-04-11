@@ -15,7 +15,7 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
-* Verify using Coco val2017.
+* Verify using COCO val2017.
 
 <!-- <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
