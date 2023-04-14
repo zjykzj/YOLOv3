@@ -15,7 +15,7 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
-* Verify using COCO val2017.
+* Train 120 rounds with [yolov3_default.cfg](./config/yolov3_default.cfg) and verify with COCO val2017. Compare with other results (training 300 rounds) as follows:
 
 <!-- <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
@@ -32,7 +32,7 @@
     <th class="tg-c3ow"></th>
     <th class="tg-7btt"><span style="font-style:normal">Original (darknet)</span></th>
     <th class="tg-7btt">DeNA/PyTorch_YOLOv3</th>
-    <th class="tg-7btt">My</th>
+    <th class="tg-7btt">zjykzj/YOLOv3(This)</th>
   </tr>
 </thead>
 <tbody>
