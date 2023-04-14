@@ -28,10 +28,10 @@ def parse_args():
     parser.add_argument('--ckpt', type=str,
                         help='path to the check point file')
     parser.add_argument('--image', type=str)
-    parser.add_argument('--background', action='store_true',
-                        default=False, help='background(no-display mode. save "./mountain_output.png")')
-    parser.add_argument('--detect_thresh', type=float,
+    parser.add_argument('--conf-thresh', type=float,
                         default=None, help='confidence threshold')
+    parser.add_argument('--nms-thresh', type=float,
+                        default=None, help='nms threshold')
     args = parser.parse_args()
 
     with open(args.cfg, 'r') as f:
@@ -53,7 +53,6 @@ def image_preprocess(args: Namespace, cfg: Dict):
 
     # BGR
     img = cv2.imread(args.image)
-    # img_raw = img.copy()[:, :, ::-1].transpose((2, 0, 1))
     img_raw = img.copy()
 
     imgsize = cfg['TEST']['IMGSIZE']
@@ -117,8 +116,10 @@ def process(args: Namespace, cfg: Dict, img: Tensor, model: Module, device: torc
     """
     confthre = cfg['TEST']['CONFTHRE']
     nmsthre = cfg['TEST']['NMSTHRE']
-    if args.detect_thresh:
-        confthre = args.detect_thresh
+    if args.conf_thresh:
+        confthre = args.conf_thresh
+    if args.nms_thresh:
+        nmsthre = args.nms_thresh
 
     with torch.no_grad():
         # img: [1, 3, 416, 416]
@@ -129,23 +130,6 @@ def process(args: Namespace, cfg: Dict, img: Tensor, model: Module, device: torc
         outputs = postprocess(outputs, 80, confthre, nmsthre)
 
     return outputs
-
-
-# def show_bbox(args: Namespace, img_raw: ndarray, bboxes: List, classes: List, coco_class_names: List, colors: List):
-#     if args.background:
-#         import matplotlib
-#         matplotlib.use('Agg')
-#
-#     from yolo.util.vis_bbox import vis_bbox
-#     import matplotlib.pyplot as plt
-#
-#     vis_bbox(
-#         img_raw, bboxes, label=classes, label_names=coco_class_names,
-#         instance_colors=colors, linewidth=2)
-#     plt.show()
-#
-#     if args.background:
-#         plt.savefig('mountain_output.png')
 
 
 def show_bbox(save_dir: str,  # 保存路径
@@ -162,13 +146,10 @@ def show_bbox(save_dir: str,  # 保存路径
     """
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    line_width = 2
-    txt_color = (255, 255, 255)
 
     for img_raw, img_name, bboxes, names, colors in zip(
             img_raw_list, img_name_list, bboxes_list, names_list, colors_list):
         im = img_raw
-        lw = line_width or max(round(sum(im.shape) / 2 * 0.003), 2)  # line width
 
         for box, pred_name, color in zip(bboxes, names, colors):
             # box: [y1, x1, y2, x2]
@@ -186,23 +167,6 @@ def show_bbox(save_dir: str,  # 保存路径
             org = (int(box[1]), int(box[0]))
             cv2.putText(im, f'{pred_name}', org, cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=.5, color=(0, 0, 0), thickness=1)
-
-            # # p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
-            # p1, p2 = (int(box[1]), int(box[0])), (int(box[3]), int(box[2]))
-            # cv2.rectangle(im, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
-            #
-            # tf = 1  # font thickness
-            # w, h = cv2.getTextSize(name, 0, fontScale=lw / 3, thickness=tf)[0]  # text width, height
-            # outside = p1[1] - h >= 3
-            # p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
-            # cv2.rectangle(im, p1, p2, color, -1, cv2.LINE_AA)  # filled
-            # cv2.putText(im,
-            #             name, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2),
-            #             0,
-            #             0.5,
-            #             txt_color,
-            #             thickness=tf,
-            #             lineType=cv2.LINE_AA)
 
         im_path = os.path.join(save_dir, img_name)
         print(f"\t+ img path: {im_path}")
@@ -241,12 +205,11 @@ def main():
 
     pred_name_list = list()
     for cls_id in classes:
-        pred_name_list.append(coco_class_names[cls_id + 1])
+        pred_name_list.append(coco_class_names[cls_id])
     pred_name_list = [pred_name_list]
 
     save_dir = './results'
     show_bbox(save_dir, img_raw_list, img_name_list, bboxes_list, pred_name_list, colors_list)
-    # show_bbox(args, img_raw, bboxes, classes, coco_class_names, colors)
 
 
 if __name__ == '__main__':
