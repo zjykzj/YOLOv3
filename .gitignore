@@ -221,3 +221,4 @@ cython_debug/
 
 /weights/
 /outputs/
+/results/
