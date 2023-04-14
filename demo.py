@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os.path
 
 from typing import List, Tuple, Dict
 
@@ -52,7 +53,8 @@ def image_preprocess(args: Namespace, cfg: Dict):
 
     # BGR
     img = cv2.imread(args.image)
-    img_raw = img.copy()[:, :, ::-1].transpose((2, 0, 1))
+    # img_raw = img.copy()[:, :, ::-1].transpose((2, 0, 1))
+    img_raw = img.copy()
 
     imgsize = cfg['TEST']['IMGSIZE']
     img, _, img_info = transform(img, np.array([]), imgsize)
@@ -129,21 +131,82 @@ def process(args: Namespace, cfg: Dict, img: Tensor, model: Module, device: torc
     return outputs
 
 
-def show_bbox(args: Namespace, img_raw: ndarray, bboxes: List, classes: List, coco_class_names: List, colors: List):
-    if args.background:
-        import matplotlib
-        matplotlib.use('Agg')
+# def show_bbox(args: Namespace, img_raw: ndarray, bboxes: List, classes: List, coco_class_names: List, colors: List):
+#     if args.background:
+#         import matplotlib
+#         matplotlib.use('Agg')
+#
+#     from yolo.util.vis_bbox import vis_bbox
+#     import matplotlib.pyplot as plt
+#
+#     vis_bbox(
+#         img_raw, bboxes, label=classes, label_names=coco_class_names,
+#         instance_colors=colors, linewidth=2)
+#     plt.show()
+#
+#     if args.background:
+#         plt.savefig('mountain_output.png')
 
-    from yolo.util.vis_bbox import vis_bbox
-    import matplotlib.pyplot as plt
 
-    vis_bbox(
-        img_raw, bboxes, label=classes, label_names=coco_class_names,
-        instance_colors=colors, linewidth=2)
-    plt.show()
+def show_bbox(save_dir: str,  # 保存路径
+              img_raw_list: List[ndarray],  # 原始图像数据列表, BGR ndarray
+              img_name_list: List[str],  # 图像名列表
+              bboxes_list: List,  # 预测边界框
+              names_list: List,  # 预测边界框对象名
+              colors_list: List):  # 预测边界框绘制颜色
+    """
+    对于绘图，输入如下数据：
+    1. 原始图像
+    2. 预测框坐标
+    3. 数据集名 + 分类概率
+    """
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    line_width = 2
+    txt_color = (255, 255, 255)
 
-    if args.background:
-        plt.savefig('mountain_output.png')
+    for img_raw, img_name, bboxes, names, colors in zip(
+            img_raw_list, img_name_list, bboxes_list, names_list, colors_list):
+        im = img_raw
+        lw = line_width or max(round(sum(im.shape) / 2 * 0.003), 2)  # line width
+
+        for box, pred_name, color in zip(bboxes, names, colors):
+            # box: [y1, x1, y2, x2]
+            # print(box, name, color)
+            assert len(box) == 4, box
+            color = tuple([int(x) for x in color])
+
+            # [y1, x1, y2, x2] -> [x1, y1] [x2, y2]
+            p1, p2 = (int(box[1]), int(box[0])), (int(box[3]), int(box[2]))
+            cv2.rectangle(im, p1, p2, color, 2)
+
+            w, h = cv2.getTextSize(f'{pred_name}', 0, fontScale=0.5, thickness=1)[0]
+            p1, p2 = (int(box[1]), int(box[0] - h)), (int(box[1] + w), int(box[0]))
+            cv2.rectangle(im, p1, p2, color, thickness=-1)
+            org = (int(box[1]), int(box[0]))
+            cv2.putText(im, f'{pred_name}', org, cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=.5, color=(0, 0, 0), thickness=1)
+
+            # # p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
+            # p1, p2 = (int(box[1]), int(box[0])), (int(box[3]), int(box[2]))
+            # cv2.rectangle(im, p1, p2, color, thickness=lw, lineType=cv2.LINE_AA)
+            #
+            # tf = 1  # font thickness
+            # w, h = cv2.getTextSize(name, 0, fontScale=lw / 3, thickness=tf)[0]  # text width, height
+            # outside = p1[1] - h >= 3
+            # p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
+            # cv2.rectangle(im, p1, p2, color, -1, cv2.LINE_AA)  # filled
+            # cv2.putText(im,
+            #             name, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2),
+            #             0,
+            #             0.5,
+            #             txt_color,
+            #             thickness=tf,
+            #             lineType=cv2.LINE_AA)
+
+        im_path = os.path.join(save_dir, img_name)
+        print(f"\t+ img path: {im_path}")
+        cv2.imwrite(im_path, im)
 
 
 def main():
@@ -169,7 +232,21 @@ def main():
         return
 
     bboxes, classes, colors, coco_class_names = parse_info(outputs, img_info[:6])
-    show_bbox(args, img_raw, bboxes, classes, coco_class_names, colors)
+
+    img_raw_list = [img_raw]
+    image_name = os.path.basename(args.image)
+    img_name_list = [image_name]
+    bboxes_list = [bboxes]
+    colors_list = [colors]
+
+    pred_name_list = list()
+    for cls_id in classes:
+        pred_name_list.append(coco_class_names[cls_id + 1])
+    pred_name_list = [pred_name_list]
+
+    save_dir = './results'
+    show_bbox(save_dir, img_raw_list, img_name_list, bboxes_list, pred_name_list, colors_list)
+    # show_bbox(args, img_raw, bboxes, classes, coco_class_names, colors)
 
 
 if __name__ == '__main__':
