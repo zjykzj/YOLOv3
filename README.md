@@ -74,6 +74,8 @@
 - [Table of Contents](#table-of-contents)
 - [Background](#background)
 - [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Container](#container)
 - [Usage](#usage)
   - [Train](#train)
   - [Test](#test)
@@ -90,6 +92,16 @@ realization of the project depends heavily on the implementation
 of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [NVIDIA/apex](https://github.com/NVIDIA/apex)
 
 ## Installation
+
+### Requirements
+
+Refer to [requirements.txt](./requirements.txt) for installing the training environment
+
+```shell
+pip install -r requirements.txt
+```
+
+### Container
 
 Development environment (Use nvidia docker container)
 
@@ -137,8 +149,8 @@ CUDA_VISIBLE_DEVICES=1 python eval.py --cfg config/yolov3_default.cfg --checkpoi
 ### Demo
 
 ```shell
->>>python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/checkpoint_79.pth.tar --image data/mountain.png --conf-thresh 0.5 --nms-thresh 0.45
->>>python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/checkpoint_79.pth.tar --image data/innsbruck.png --conf-thresh 0.5 --nms-thresh 0.45
+python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/checkpoint_79.pth.tar --image data/mountain.png --conf-thresh 0.5 --nms-thresh 0.45
+python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/checkpoint_79.pth.tar --image data/innsbruck.png --conf-thresh 0.5 --nms-thresh 0.45
 ```
 
 <p align="left"><img src="data/innsbruck_output.png" height="160"\>  <img src="data/mountain_output.png" height="160"\></p>
