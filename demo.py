@@ -89,6 +89,7 @@ def parse_info(outputs: List, info_img: List or Tuple):
     coco_class_names, coco_class_ids, coco_class_colors = get_coco_label_names()
 
     bboxes = list()
+    confs = list()
     classes = list()
     colors = list()
 
@@ -106,8 +107,9 @@ def parse_info(outputs: List, info_img: List or Tuple):
         bboxes.append(box)
         classes.append(cls_id)
         colors.append(coco_class_colors[int(cls_pred)])
+        confs.append(conf * cls_conf)
 
-    return bboxes, classes, colors, coco_class_names
+    return bboxes, confs, classes, colors, coco_class_names
 
 
 def process(args: Namespace, cfg: Dict, img: Tensor, model: Module, device: torch.device):
@@ -136,6 +138,7 @@ def show_bbox(save_dir: str,  # 保存路径
               img_raw_list: List[ndarray],  # 原始图像数据列表, BGR ndarray
               img_name_list: List[str],  # 图像名列表
               bboxes_list: List,  # 预测边界框
+              confs_list: List,  # 预测边界框置信度
               names_list: List,  # 预测边界框对象名
               colors_list: List):  # 预测边界框绘制颜色
     """
@@ -147,11 +150,11 @@ def show_bbox(save_dir: str,  # 保存路径
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    for img_raw, img_name, bboxes, names, colors in zip(
-            img_raw_list, img_name_list, bboxes_list, names_list, colors_list):
+    for img_raw, img_name, bboxes, confs, names, colors in zip(
+            img_raw_list, img_name_list, bboxes_list, confs_list, names_list, colors_list):
         im = img_raw
 
-        for box, pred_name, color in zip(bboxes, names, colors):
+        for box, conf, pred_name, color in zip(bboxes, confs, names, colors):
             # box: [y1, x1, y2, x2]
             # print(box, name, color)
             assert len(box) == 4, box
@@ -161,11 +164,12 @@ def show_bbox(save_dir: str,  # 保存路径
             p1, p2 = (int(box[1]), int(box[0])), (int(box[3]), int(box[2]))
             cv2.rectangle(im, p1, p2, color, 2)
 
-            w, h = cv2.getTextSize(f'{pred_name}', 0, fontScale=0.5, thickness=1)[0]
+            text_str = f'{pred_name} {conf:.3f}'
+            w, h = cv2.getTextSize(text_str, 0, fontScale=0.5, thickness=1)[0]
             p1, p2 = (int(box[1]), int(box[0] - h)), (int(box[1] + w), int(box[0]))
             cv2.rectangle(im, p1, p2, color, thickness=-1)
             org = (int(box[1]), int(box[0]))
-            cv2.putText(im, f'{pred_name}', org, cv2.FONT_HERSHEY_SIMPLEX,
+            cv2.putText(im, text_str, org, cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=.5, color=(0, 0, 0), thickness=1)
 
         im_path = os.path.join(save_dir, img_name)
@@ -195,12 +199,13 @@ def main():
         print("No Objects Deteted!!")
         return
 
-    bboxes, classes, colors, coco_class_names = parse_info(outputs, img_info[:6])
+    bboxes, confs, classes, colors, coco_class_names = parse_info(outputs, img_info[:6])
 
     img_raw_list = [img_raw]
     image_name = os.path.basename(args.image)
     img_name_list = [image_name]
     bboxes_list = [bboxes]
+    confs_list = [confs]
     colors_list = [colors]
 
     pred_name_list = list()
@@ -209,7 +214,7 @@ def main():
     pred_name_list = [pred_name_list]
 
     save_dir = './results'
-    show_bbox(save_dir, img_raw_list, img_name_list, bboxes_list, pred_name_list, colors_list)
+    show_bbox(save_dir, img_raw_list, img_name_list, bboxes_list, confs_list, pred_name_list, colors_list)
 
 
 if __name__ == '__main__':
