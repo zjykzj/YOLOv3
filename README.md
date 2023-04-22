@@ -69,6 +69,11 @@
 </tbody>
 </table>
 
+***Updates:***
+
+* **16/04/2023: Optimized version, fixed preprocessing implementation, YOLOv3 network performance close to the original paper implementation.** [19fa7a4](https://github.com/zjykzj/YOLOv3/releases/tag/v2.0)
+* **16/02/2023: Initial version, implementing preliminary YOLOv3 network training and inference implementation.** [9bf224f](https://github.com/zjykzj/YOLOv3/releases/tag/v1.0)
+
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
