@@ -72,6 +72,7 @@
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
+- [Latest News](#latest-news)
 - [Background](#background)
 - [Installation](#installation)
   - [Requirements](#requirements)
