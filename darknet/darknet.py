@@ -73,17 +73,42 @@ class DownSample(nn.Module):
         return x
 
 
+def make_stage(stage_cfg):
+    in_ch, out_ch, kernel_size, stride, num_blocks = stage_cfg
+    return DownSample(in_ch=in_ch, out_ch=out_ch, kernel_size=kernel_size, stride=stride, num_blocks=num_blocks)
+
+
 class Backbone(nn.Module):
+    cfg = {
+        'stage1': [32, 64, 3, 2, 1],
+        'stage2': [64, 128, 3, 2, 2],
+        'stage3': [128, 256, 3, 2, 8],
+        'stage4': [256, 512, 3, 2, 8],
+        'stage5': [512, 1024, 3, 2, 4],
+    }
 
-    def __init__(self):
+    fast_cfg = {
+        'stage1': [32, 64, 3, 2, 1],
+        'stage2': [64, 128, 3, 2, 1],
+        'stage3': [128, 256, 3, 2, 1],
+        'stage4': [256, 512, 3, 2, 1],
+        'stage5': [512, 1024, 3, 2, 1],
+    }
+
+    def __init__(self, in_channel=3, is_fast=False):
         super(Backbone, self).__init__()
-        self.stem = ConvBNAct(in_ch=3, out_ch=32, kernel_size=3, stride=1)
+        self.stem = ConvBNAct(in_ch=in_channel, out_ch=32, kernel_size=3, stride=1)
 
-        self.stage1 = DownSample(in_ch=32, out_ch=64, kernel_size=3, stride=2, num_blocks=1)
-        self.stage2 = DownSample(in_ch=64, out_ch=128, kernel_size=3, stride=2, num_blocks=2)
-        self.stage3 = DownSample(in_ch=128, out_ch=256, kernel_size=3, stride=2, num_blocks=8)
-        self.stage4 = DownSample(in_ch=256, out_ch=512, kernel_size=3, stride=2, num_blocks=8)
-        self.stage5 = DownSample(in_ch=512, out_ch=1024, kernel_size=3, stride=2, num_blocks=4)
+        if is_fast:
+            cfg = self.fast_cfg
+        else:
+            cfg = self.cfg
+
+        self.stage1 = make_stage(cfg['stage1'])
+        self.stage2 = make_stage(cfg['stage2'])
+        self.stage3 = make_stage(cfg['stage3'])
+        self.stage4 = make_stage(cfg['stage4'])
+        self.stage5 = make_stage(cfg['stage5'])
 
     def forward(self, x):
         x = self.stem(x)
@@ -98,9 +123,26 @@ class Backbone(nn.Module):
 
 class Darknet53(nn.Module):
 
-    def __init__(self, num_classes=1000):
+    def __init__(self, in_channel=3, num_classes=1000):
         super(Darknet53, self).__init__()
-        self.backbone = Backbone()
+        self.backbone = Backbone(in_channel=in_channel, is_fast=False)
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.classifier = nn.Linear(1024, num_classes)
+
+    def forward(self, x):
+        x = self.backbone(x)
+        x = self.pool(x)
+        x = x.reshape(x.shape[:2])
+
+        x = self.classifier(x)
+        return x
+
+
+class FastDarknet53(nn.Module):
+
+    def __init__(self, in_channel=3, num_classes=1000):
+        super(FastDarknet53, self).__init__()
+        self.backbone = Backbone(in_channel=in_channel, is_fast=True)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Linear(1024, num_classes)
 
@@ -114,7 +156,13 @@ class Darknet53(nn.Module):
 
 
 if __name__ == '__main__':
-    m = Darknet53()
+    m = Darknet53(in_channel=3, num_classes=1000)
+    data = torch.randn(1, 3, 224, 224)
+
+    output = m(data)
+    print(output.shape)
+
+    m = FastDarknet53(in_channel=3, num_classes=1000)
     data = torch.randn(1, 3, 224, 224)
 
     output = m(data)
