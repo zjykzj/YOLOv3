@@ -106,7 +106,7 @@ def test_head():
 
 
 def test_yolov3():
-    cfg_file = 'config/yolov3_default.cfg'
+    cfg_file = 'configs/yolov3_default.cfg'
     with open(cfg_file, 'r') as f:
         import yaml
 
