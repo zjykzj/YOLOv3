@@ -24,6 +24,8 @@ class DarknetBackbone(nn.Module):
 
     def __init__(self, arch='Darknet53', pretrained=None):
         super().__init__()
+        self.arch = arch
+        self.pretrained = pretrained
 
         if 'Darknet53' == arch:
             self.darknet = Darknet53(in_channel=3, num_classes=1000)
