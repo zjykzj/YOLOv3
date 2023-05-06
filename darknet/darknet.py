@@ -156,14 +156,33 @@ class FastDarknet53(nn.Module):
 
 
 if __name__ == '__main__':
-    m = Darknet53(in_channel=3, num_classes=1000)
     data = torch.randn(1, 3, 224, 224)
 
+    print("=> Darknet53")
+    m = Darknet53(in_channel=3, num_classes=1000)
+    ckpt_path = 'weights/darknet59_224/model_best.pth.tar'
+    state_dict = torch.load(ckpt_path, map_location='cpu')
+    if 'state_dict' in state_dict:
+        state_dict = state_dict['state_dict']
+    state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}  # strip the names
+
+    m.load_state_dict(state_dict, strict=True)
+
+    m.train()
     output = m(data)
     print(output.shape)
 
-    m = FastDarknet53(in_channel=3, num_classes=1000)
-    data = torch.randn(1, 3, 224, 224)
+    m.eval()
+    output = m(data)
+    print(output.shape)
 
+    print("=> FastDarknet53")
+    m = FastDarknet53(in_channel=3, num_classes=1000)
+
+    m.train()
+    output = m(data)
+    print(output.shape)
+
+    m.eval()
     output = m(data)
     print(output.shape)

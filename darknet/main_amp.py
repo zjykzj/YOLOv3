@@ -45,6 +45,8 @@ def parse():
     model_names = sorted(name for name in models.__dict__
                          if name.islower() and not name.startswith("__")
                          and callable(models.__dict__[name]))
+    model_names.append('darknet53')
+    model_names.append('fastdarknet53')
 
     parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
     parser.add_argument('data', metavar='DIR',
@@ -54,6 +56,10 @@ def parse():
                         help='model architecture: ' +
                              ' | '.join(model_names) +
                              ' (default: resnet18)')
+
+    parser.add_argument('--input', default=True, action='store_false',
+                        help='Input Image Size. Default: 224')
+
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                         help='number of data loading workers (default: 4)')
     parser.add_argument('--epochs', default=90, type=int, metavar='N',
@@ -140,9 +146,19 @@ def main():
     # else:
     #     print("=> creating model '{}'".format(args.arch))
     #     model = models.__dict__[args.arch]()
-    print("=> creating model Darknet53")
-    from darknet import Darknet53
-    model = Darknet53()
+    # print("=> creating model Darknet53")
+    # from darknet import Darknet53
+    # model = Darknet53()
+    if args.arch == 'darknet53':
+        print("=> creating model Darknet53")
+        from .darknet import Darknet53
+        model = Darknet53(num_classes=1000)
+    elif args.arch == 'fastdarknet53':
+        print("=> creating model FastDarknet53")
+        from .darknet import FastDarknet53
+        model = FastDarknet53(num_classes=1000)
+    else:
+        raise ValueError(f"{args.arch} doesn't supports")
 
     if args.sync_bn:
         import apex
@@ -202,15 +218,22 @@ def main():
     traindir = os.path.join(args.data, 'train')
     valdir = os.path.join(args.data, 'val')
 
-    if (args.arch == "inception_v3"):
-        raise RuntimeError("Currently, inception_v3 is not supported by this example.")
-        # crop_size = 299
-        # val_size = 320 # I chose this value arbitrarily, we can adjust.
+    if args.input:
+        crop_size = 224
+        val_size = 256
     else:
-        # crop_size = 224
-        # val_size = 256
-        crop_size = 256
-        val_size = 288
+        crop_size = 448
+        val_size = 512
+    print(f"crop_size: {crop_size} val_size: {val_size}")
+    # if (args.arch == "inception_v3"):
+    #     raise RuntimeError("Currently, inception_v3 is not supported by this example.")
+    #     # crop_size = 299
+    #     # val_size = 320 # I chose this value arbitrarily, we can adjust.
+    # else:
+    #     # crop_size = 224
+    #     # val_size = 256
+    #     crop_size = 256
+    #     val_size = 288
 
     train_dataset = datasets.ImageFolder(
         traindir,
@@ -268,9 +291,10 @@ def main():
                 'epoch': epoch + 1,
                 'arch': args.arch,
                 'state_dict': model.state_dict(),
+                'prec1': prec1,
                 'best_prec1': best_prec1,
                 'optimizer': optimizer.state_dict(),
-            }, is_best)
+            }, is_best, output_dir=f'./weights/{args.arch}_{crop_size}')
 
 
 class data_prefetcher():
@@ -486,10 +510,23 @@ def validate(val_loader, model, criterion):
     return top1.avg
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar', output_dir='./'):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    ckpt_path = os.path.join(output_dir, filename)
+    print(f"=> Save to {ckpt_path}")
+    torch.save(state, ckpt_path)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        best_path = os.path.join(output_dir, 'model_best.pth.tar')
+        print(f"=> Save to {best_path}")
+        shutil.copyfile(ckpt_path, best_path)
+
+
+# def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+#     torch.save(state, filename)
+#     if is_best:
+#         shutil.copyfile(filename, 'weights/darknet59_224/model_best.pth.tar')
 
 
 class AverageMeter(object):
