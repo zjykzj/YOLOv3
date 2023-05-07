@@ -141,7 +141,8 @@ class YOLOv3Head(nn.Module):
         self.anchors = anchors
         self.num_classes = num_classes
 
-        output_ch = (4 + 1 + self.num_classes) * 3
+        num_anchors = len(self.anchor_mask[0])
+        output_ch = (4 + 1 + self.num_classes) * num_anchors
 
         self.yolo1 = nn.Sequential(
             ConvBNAct(in_ch=512, out_ch=1024, kernel_size=3, stride=1),
