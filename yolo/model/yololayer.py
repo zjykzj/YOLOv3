@@ -16,14 +16,15 @@ from torch import Tensor
 
 class YOLOLayer(nn.Module):
 
-    def __init__(self, anchors, stride, num_classes=80):
+    def __init__(self, masked_anchors, stride, num_classes=80):
         super(YOLOLayer, self).__init__()
-        assert isinstance(anchors, Tensor)
-        self.anchors = anchors
+        assert isinstance(masked_anchors, Tensor)
+        self.masked_anchors = masked_anchors
         self.stride = stride
         self.num_classes = num_classes
 
-        self.num_anchors = len(self.anchors)
+        self.masked_anchors /= stride
+        self.num_anchors = len(self.masked_anchors)
 
     def forward(self, outputs):
         if self.training:
@@ -46,9 +47,9 @@ class YOLOLayer(nn.Module):
 
         # broadcast anchors to all grids
         # [num_anchors] -> [1, num_anchors, 1, 1] -> [B, num_anchors, H, W]
-        w_anchors = torch.broadcast_to(self.anchors[:, 0].reshape(1, self.num_anchors, 1, 1),
+        w_anchors = torch.broadcast_to(self.masked_anchors[:, 0].reshape(1, self.num_anchors, 1, 1),
                                        [B, self.num_anchors, H, W]).to(dtype=dtype, device=device)
-        h_anchors = torch.broadcast_to(self.anchors[:, 1].reshape(1, self.num_anchors, 1, 1),
+        h_anchors = torch.broadcast_to(self.masked_anchors[:, 1].reshape(1, self.num_anchors, 1, 1),
                                        [B, self.num_anchors, H, W]).to(dtype=dtype, device=device)
 
         # Reshape
