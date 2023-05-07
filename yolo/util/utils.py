@@ -137,12 +137,12 @@ def postprocess(prediction, num_classes, conf_thre=0.005, nms_thre=0.45):
         # 过滤不符合置信度阈值的预测框
         image_pred = image_pred[conf_mask]
 
-        # # 如果此时输出个数超过最大限制，那么再次进行过滤，按照置信度进行排序，去前面N个
-        # if len(image_pred) > max_num_preds:
-        #     class_pred = class_pred[conf_mask]
-        #     conf_mask = torch.argsort(image_pred[:, 4] * class_pred)
-        #     conf_mask = conf_mask[:max_num_preds]
-        #     image_pred = image_pred[conf_mask]
+        # 如果此时输出个数超过最大限制，那么再次进行过滤，按照置信度进行排序，去前面N个
+        if len(image_pred) > max_num_preds:
+            class_pred = class_pred[conf_mask]
+            conf_mask = torch.argsort(image_pred[:, 4] * class_pred)
+            conf_mask = conf_mask[:max_num_preds]
+            image_pred = image_pred[conf_mask]
 
         # If none are remaining => process next image
         # 如果所有预测框都已经舍弃，继续下一张图片的预测框计算
