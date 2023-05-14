@@ -90,7 +90,7 @@ class YOLOv3Loss(nn.Module):
 
         self.ref_anchors = anchors
 
-    def make_pred_boxes(self, outputs, masked_anchors, ref_anchors):
+    def make_pred_boxes(self, outputs: Tensor, masked_anchors: Tensor, ref_anchors: Tensor):
         dtype = outputs.dtype
         device = outputs.device
 
@@ -137,9 +137,9 @@ class YOLOv3Loss(nn.Module):
         # [B, H, W, num_anchors, 4] -> [B, H*W, num_anchors, 4]
         pred_boxes = pred_boxes.reshape(B, H * W, num_anchors, 4)
 
-        # [4, num_anchors, H, W] -> [H, W, num_anchors, 4]
+        # [4, H, W, num_anchors] -> [H, W, num_anchors, 4]
         # [x_c, y_c, w, h]
-        masked_anchors_x1y1 = torch.stack([x_shift, y_shift, w_anchors, h_anchors]).permute(2, 3, 1, 0)
+        masked_anchors_x1y1 = torch.stack([x_shift, y_shift, w_anchors, h_anchors]).permute(1, 2, 3, 0)
         # [H, W, num_anchors, 4] -> [H*W, num_anchors, 4]
         masked_anchors_x1y1 = masked_anchors_x1y1.reshape(H * W, num_anchors, -1)
 
@@ -157,16 +157,16 @@ class YOLOv3Loss(nn.Module):
                                            (H, W, num_ref_anchors)).to(dtype=dtype, device=device)
         ref_h_anchors = torch.broadcast_to(ref_anchors[:, 1].reshape(1, 1, num_ref_anchors),
                                            (H, W, num_ref_anchors)).to(dtype=dtype, device=device)
-        # [4, num_ref_anchors, H, W] -> [H, W, num_ref_anchors, 4]
+        # [4, H, W, num_ref_anchors] -> [H, W, num_ref_anchors, 4]
         # [x_c, y_c, w, h]
-        ref_anchors_x1y1 = torch.stack([x_shift, y_shift, ref_w_anchors, ref_h_anchors]).permute(2, 3, 1, 0)
+        ref_anchors_x1y1 = torch.stack([x_shift, y_shift, ref_w_anchors, ref_h_anchors]).permute(1, 2, 3, 0)
         # [H, W, num_ref_anchors, 4] -> [H*W, num_ref_anchors, 4]
         ref_anchors_x1y1 = ref_anchors_x1y1.reshape(H * W, num_ref_anchors, 4)
 
         return pred_boxes, masked_anchors_x1y1, ref_anchors_x1y1
 
     def build_targets(self, outputs: Tensor, targets: Tensor,
-                      masked_anchors: Tensor, anchor_mask: List, ref_anchors: Tensor):
+                      anchor_mask: List, masked_anchors: Tensor, ref_anchors: Tensor):
         num_anchors = len(masked_anchors)
         num_ref_anchors = len(ref_anchors)
 
@@ -297,14 +297,15 @@ class YOLOv3Loss(nn.Module):
 
         return iou_target, iou_mask, box_target, box_mask, box_scale, class_target, class_mask
 
-    def _forward(self, outputs, targets, masked_anchors, anchor_mask, ref_anchors):
+    def _forward(self, outputs: Tensor, targets: Tensor,
+                 anchor_mask: List, masked_anchors: Tensor, ref_anchors: Tensor):
         """
         计算损失需要得到
         1. 标注框坐标和锚点框坐标之间的delta（作为target）
         2. 输出卷积特征生成的预测框delta（作为预测结果）
         """
         iou_target, iou_mask, box_target, box_mask, box_scale, class_target, class_mask = \
-            self.build_targets(outputs.detach().clone(), targets, masked_anchors, anchor_mask, ref_anchors)
+            self.build_targets(outputs.detach().clone(), targets, anchor_mask, masked_anchors, ref_anchors)
 
         num_anchors = len(masked_anchors)
 
@@ -366,6 +367,6 @@ class YOLOv3Loss(nn.Module):
             for i, (stride, anchor_mask) in enumerate(zip(self.strides, self.anchor_mask)):
                 ref_anchors = self.anchors / stride
                 masked_anchors = ref_anchors[anchor_mask]
-                loss += self._forward(output, targets.clone(), masked_anchors, anchor_mask, ref_anchors)
+                loss += self._forward(output, targets.clone(), anchor_mask, masked_anchors, ref_anchors)
 
         return loss
