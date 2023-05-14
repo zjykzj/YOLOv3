@@ -44,6 +44,10 @@ def build_criterion(cfg: Dict, device=None):
         criterion = YOLOv3Loss(anchors,
                                num_classes=cfg['MODEL']['N_CLASSES'],
                                ignore_thresh=cfg['CRITERION']['IGNORE_THRESH'],
+                               coord_scale=cfg['CRITERION']['COORD_SCALE'],
+                               noobj_scale=cfg['CRITERION']['NOOBJ_SCALE'],
+                               obj_scale=cfg['CRITERION']['OBJ_SCALE'],
+                               class_scale=cfg['CRITERION']['CLASS_SCALE'],
                                ).to(device)
     else:
         raise ValueError(f"{loss_type} doesn't supports")
