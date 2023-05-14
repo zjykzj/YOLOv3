@@ -65,7 +65,9 @@ def build_mask(B, H, W, num_anchors=3, num_classes=20, dtype=torch.float, device
     box_scale = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
 
     # [B, H*W, num_anchors, num_classes]
-    class_target = torch.zeros((B, H * W, num_anchors, num_classes)).to(dtype=dtype, device=device)
+    # class_target = torch.zeros((B, H * W, num_anchors, num_classes)).to(dtype=dtype, device=device)
+    # [B, H*W, num_anchors, 1]
+    class_target = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
     # [B, H*W, num_anchors, 1]
     class_mask = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
 
@@ -276,7 +278,8 @@ class YOLOv3Loss(nn.Module):
 
                 # update cls_target, cls_mask
                 # 赋值对应类别下标, 对应掩码设置为1
-                class_target[bi, cell_idx, masked_anchor_idx, int(gt_class)] = 1.
+                # class_target[bi, cell_idx, masked_anchor_idx, int(gt_class)] = 1.
+                class_target[bi, cell_idx, masked_anchor_idx, :] = gt_class
                 class_mask[bi, cell_idx, masked_anchor_idx, :] = 1
 
                 # update iou target and iou mask
@@ -292,7 +295,8 @@ class YOLOv3Loss(nn.Module):
         # [B, H*W, num_anchors, 1] -> [B*H*W*num_anchors]
         box_scale = box_scale.reshape(-1, 1)
         # [B, H*W, num_anchors, num_classes] -> [B*H*W*num_anchors, num_classes]
-        class_target = class_target.reshape(-1, self.num_classes)
+        # class_target = class_target.reshape(-1, self.num_classes)
+        class_target = class_target.reshape(-1).long()
         class_mask = class_mask.reshape(-1)
 
         return iou_target, iou_mask, box_target, box_mask, box_scale, class_target, class_mask
