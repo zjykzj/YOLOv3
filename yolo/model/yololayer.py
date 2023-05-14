@@ -58,11 +58,11 @@ class YOLOLayer(nn.Module):
         # [B, num_anchors * (4+1+num_classes), H, W] ->
         # [B, H, W, num_anchors * (4+1+num_classes)] ->
         # [B, H, W, num_anchors, 4+1+num_classes]
-        output = outputs.permute(0, 2, 3, 1).reshape(B, H, W, self.num_anchors, n_ch)
+        outputs = outputs.permute(0, 2, 3, 1).reshape(B, H, W, self.num_anchors, n_ch)
 
         # logistic activation
         # xy + obj_pred + cls_pred
-        output[..., np.r_[:2, 4:5]] = torch.sigmoid(output[..., np.r_[:2, 4:5]])
+        outputs[..., np.r_[:2, 4:5]] = torch.sigmoid(outputs[..., np.r_[:2, 4:5]])
 
         # b_x = sigmoid(t_x) + c_x
         # b_y = sigmoid(t_y) + c_y
@@ -70,19 +70,19 @@ class YOLOLayer(nn.Module):
         # b_h = exp(t_h) * p_h
         #
         # 预测框坐标x0加上每个网格的左上角坐标x
-        output[..., 0] += x_shift
+        outputs[..., 0] += x_shift
         # 预测框坐标y0加上每个网格的左上角坐标y
-        output[..., 1] += y_shift
+        outputs[..., 1] += y_shift
         # 计算预测框长/宽的实际长度
-        output[..., 2] = torch.exp(output[..., 2]) * w_anchors
-        output[..., 3] = torch.exp(output[..., 3]) * h_anchors
+        outputs[..., 2] = torch.exp(outputs[..., 2]) * w_anchors
+        outputs[..., 3] = torch.exp(outputs[..., 3]) * h_anchors
 
         # 分类概率压缩
         outputs[..., 5:] = torch.softmax(outputs[..., 5:], dim=-1)
 
         # 推理阶段，不计算损失. 将预测框坐标按比例返回到原图大小
-        output[..., :4] *= self.stride
+        outputs[..., :4] *= self.stride
         # [xc, yc, w, h] -> [x1, y1, x2, y2]
         outputs[..., :4] = xywh2xyxy(outputs[..., :4], is_center=True)
         # [B, H, W, n_anchors, n_ch] -> [B, H*W*n_anchors, n_ch]
-        return output.reshape(B, -1, n_ch)
+        return outputs.reshape(B, -1, n_ch)
