@@ -13,9 +13,9 @@ import torch
 from torch import Tensor
 
 
-def xywh2xyxy(boxes, is_center=False):
+def xywh2xyxy(boxes: Tensor, is_center: bool = False):
     assert len(boxes.shape) >= 2 and boxes.shape[-1] == 4
-    boxes_xxyy = copy.deepcopy(boxes)
+    boxes_xxyy = boxes.new_zeros(boxes.shape)
     if is_center:
         # [x_c, y_c, w, h] -> [x1, y1, x2, y2]
         boxes_xxyy[..., 0] = (boxes[..., 0] - boxes[..., 2] / 2)
