@@ -76,7 +76,7 @@ def build_mask(B, H, W, num_anchors=3, num_classes=20, dtype=torch.float, device
 
 class YOLOv3Loss(nn.Module):
     strides = [32, 16, 8]
-    anchor_mask = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
+    anchor_masks = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
 
     def __init__(self, anchors, num_classes=80, ignore_thresh=0.5,
                  coord_scale=1.0, noobj_scale=1.0, obj_scale=1.0, class_scale=1.0):
@@ -365,12 +365,15 @@ class YOLOv3Loss(nn.Module):
         return loss / B
 
     def forward(self, outputs, targets):
-        loss = 0.
-        for output in outputs:
+        loss_list = list()
+        for idx, output in enumerate(outputs):
             assert len(output) == len(targets)
-            for i, (stride, anchor_mask) in enumerate(zip(self.strides, self.anchor_mask)):
-                ref_anchors = self.anchors / stride
-                masked_anchors = ref_anchors[anchor_mask]
-                loss += self._forward(output, targets.clone(), anchor_mask, masked_anchors, ref_anchors)
 
-        return loss
+            stride = self.strides[idx]
+            anchor_mask = self.anchor_masks[idx]
+
+            ref_anchors = self.anchors / stride
+            masked_anchors = ref_anchors[anchor_mask]
+            loss_list.append(self._forward(output, targets.clone(), anchor_mask, masked_anchors, ref_anchors))
+
+        return torch.stack(loss_list).sum()
