@@ -134,14 +134,14 @@ class FPNNeck(nn.Module):
 
 class YOLOv3Head(nn.Module):
     strides = [32, 16, 8]
-    anchor_mask = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
+    anchor_masks = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
 
     def __init__(self, anchors, num_classes=80):
         super(YOLOv3Head, self).__init__()
         self.anchors = anchors
         self.num_classes = num_classes
 
-        num_anchors = len(self.anchor_mask[0])
+        num_anchors = 3
         output_ch = (4 + 1 + self.num_classes) * num_anchors
 
         self.yolo1 = nn.Sequential(
@@ -149,7 +149,7 @@ class YOLOv3Head(nn.Module):
             nn.Conv2d(in_channels=1024,
                       out_channels=output_ch,
                       kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
-            YOLOLayer(self.anchors[self.anchor_mask[0]], self.strides[0], num_classes=self.num_classes)
+            YOLOLayer(self.anchors[self.anchor_masks[0]], self.strides[0], num_classes=self.num_classes)
         )
 
         self.yolo2 = nn.Sequential(
@@ -157,7 +157,7 @@ class YOLOv3Head(nn.Module):
             nn.Conv2d(in_channels=512,
                       out_channels=output_ch,
                       kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
-            YOLOLayer(self.anchors[self.anchor_mask[1]], self.strides[1], num_classes=self.num_classes)
+            YOLOLayer(self.anchors[self.anchor_masks[1]], self.strides[1], num_classes=self.num_classes)
         )
 
         self.yolo3 = nn.Sequential(
@@ -166,7 +166,7 @@ class YOLOv3Head(nn.Module):
             nn.Conv2d(in_channels=256,
                       out_channels=output_ch,
                       kernel_size=(1, 1), stride=(1, 1), padding=0, bias=True),
-            YOLOLayer(self.anchors[self.anchor_mask[2]], self.strides[2], num_classes=self.num_classes)
+            YOLOLayer(self.anchors[self.anchor_masks[2]], self.strides[2], num_classes=self.num_classes)
         )
 
         self._init_weights()
