@@ -49,13 +49,13 @@
     <td class="tg-fr9f">COCO AP[IoU=0.50:0.95]</td>
     <td class="tg-zkss">0.310</td>
     <td class="tg-9y4h">0.311</td>
-    <td class="tg-9y4h">0.259</td>
+    <td class="tg-9y4h">0.270</td>
   </tr>
   <tr>
     <td class="tg-baqh">COCO AP[IoU=0.50]</td>
     <td class="tg-baqh">0.553</td>
     <td class="tg-baqh">0.558</td>
-    <td class="tg-baqh">0.466</td>
+    <td class="tg-baqh">0.490</td>
   </tr>
 </tbody>
 </table>
@@ -151,27 +151,27 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node
 
 ```shell
 python eval.py -c configs/yolov3_coco.cfg -ckpt outputs/yolov3_coco/model_best.pth.tar --traversal ../datasets/coco
-Input Size：[320x320] ap50_95: = 0.2452 ap50: = 0.4456
-Input Size：[352x352] ap50_95: = 0.2524 ap50: = 0.4565
-Input Size：[384x384] ap50_95: = 0.2551 ap50: = 0.4585
-Input Size：[416x416] ap50_95: = 0.2593 ap50: = 0.4657
-Input Size：[448x448] ap50_95: = 0.2604 ap50: = 0.4651
-Input Size：[480x480] ap50_95: = 0.2568 ap50: = 0.4590
-Input Size：[512x512] ap50_95: = 0.2574 ap50: = 0.4598
-Input Size：[544x544] ap50_95: = 0.2530 ap50: = 0.4538
-Input Size：[576x576] ap50_95: = 0.2496 ap50: = 0.4506
-Input Size：[608x608] ap50_95: = 0.2440 ap50: = 0.4417
+Input Size：[320x320] ap50_95: = 0.2501 ap50: = 0.4629
+Input Size：[352x352] ap50_95: = 0.2581 ap50: = 0.4725
+Input Size：[384x384] ap50_95: = 0.2615 ap50: = 0.4763
+Input Size：[416x416] ap50_95: = 0.2695 ap50: = 0.4902
+Input Size：[448x448] ap50_95: = 0.2717 ap50: = 0.4911
+Input Size：[480x480] ap50_95: = 0.2708 ap50: = 0.4912
+Input Size：[512x512] ap50_95: = 0.2697 ap50: = 0.4883
+Input Size：[544x544] ap50_95: = 0.2692 ap50: = 0.4870
+Input Size：[576x576] ap50_95: = 0.2659 ap50: = 0.4840
+Input Size：[608x608] ap50_95: = 0.2612 ap50: = 0.4774
 python eval.py -c configs/yolov3_voc.cfg -ckpt outputs/yolov3_voc/model_best.pth.tar --traversal ../datasets/voc
-Input Size：[320x320] ap50_95: = -1.0000 ap50: = 0.7377
-Input Size：[352x352] ap50_95: = -1.0000 ap50: = 0.7528
-Input Size：[384x384] ap50_95: = -1.0000 ap50: = 0.7616
-Input Size：[416x416] ap50_95: = -1.0000 ap50: = 0.7693
-Input Size：[448x448] ap50_95: = -1.0000 ap50: = 0.7752
-Input Size：[480x480] ap50_95: = -1.0000 ap50: = 0.7741
-Input Size：[512x512] ap50_95: = -1.0000 ap50: = 0.7753
-Input Size：[544x544] ap50_95: = -1.0000 ap50: = 0.7825
-Input Size：[576x576] ap50_95: = -1.0000 ap50: = 0.7755
-Input Size：[608x608] ap50_95: = -1.0000 ap50: = 0.7733
+Input Size：[320x320] ap50_95: = -1.0000 ap50: = 0.7156
+Input Size：[352x352] ap50_95: = -1.0000 ap50: = 0.7252
+Input Size：[384x384] ap50_95: = -1.0000 ap50: = 0.7416
+Input Size：[416x416] ap50_95: = -1.0000 ap50: = 0.7524
+Input Size：[448x448] ap50_95: = -1.0000 ap50: = 0.7597
+Input Size：[480x480] ap50_95: = -1.0000 ap50: = 0.7526
+Input Size：[512x512] ap50_95: = -1.0000 ap50: = 0.7563
+Input Size：[544x544] ap50_95: = -1.0000 ap50: = 0.7555
+Input Size：[576x576] ap50_95: = -1.0000 ap50: = 0.7493
+Input Size：[608x608] ap50_95: = -1.0000 ap50: = 0.7430
 ```
 
 ### Demo
