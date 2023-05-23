@@ -62,7 +62,8 @@ class YOLOLayer(nn.Module):
 
         # logistic activation
         # xy + obj_pred + cls_pred
-        outputs[..., np.r_[:2, 4:5]] = torch.sigmoid(outputs[..., np.r_[:2, 4:5]])
+        # outputs[..., np.r_[:2, 4:5]] = torch.sigmoid(outputs[..., np.r_[:2, 4:5]])
+        outputs[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(outputs[..., np.r_[:2, 4:n_ch]])
 
         # b_x = sigmoid(t_x) + c_x
         # b_y = sigmoid(t_y) + c_y
@@ -78,7 +79,7 @@ class YOLOLayer(nn.Module):
         outputs[..., 3] = torch.exp(outputs[..., 3]) * h_anchors
 
         # 分类概率压缩
-        outputs[..., 5:] = torch.softmax(outputs[..., 5:], dim=-1)
+        # outputs[..., 5:] = torch.softmax(outputs[..., 5:], dim=-1)
 
         # 推理阶段，不计算损失. 将预测框坐标按比例返回到原图大小
         outputs[..., :4] *= self.stride

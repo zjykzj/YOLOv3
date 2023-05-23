@@ -65,9 +65,9 @@ def build_mask(B, H, W, num_anchors=3, num_classes=20, dtype=torch.float, device
     box_scale = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
 
     # [B, H*W, num_anchors, num_classes]
-    # class_target = torch.zeros((B, H * W, num_anchors, num_classes)).to(dtype=dtype, device=device)
+    class_target = torch.zeros((B, H * W, num_anchors, num_classes)).to(dtype=dtype, device=device)
     # [B, H*W, num_anchors, 1]
-    class_target = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
+    # class_target = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
     # [B, H*W, num_anchors, 1]
     class_mask = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
 
@@ -278,8 +278,8 @@ class YOLOv3Loss(nn.Module):
 
                 # update cls_target, cls_mask
                 # 赋值对应类别下标, 对应掩码设置为1
-                # class_target[bi, cell_idx, masked_anchor_idx, int(gt_class)] = 1.
-                class_target[bi, cell_idx, masked_anchor_idx, :] = gt_class
+                class_target[bi, cell_idx, masked_anchor_idx, int(gt_class)] = 1.
+                # class_target[bi, cell_idx, masked_anchor_idx, :] = gt_class
                 class_mask[bi, cell_idx, masked_anchor_idx, :] = 1
 
                 # update iou target and iou mask
@@ -295,8 +295,8 @@ class YOLOv3Loss(nn.Module):
         # [B, H*W, num_anchors, 1] -> [B*H*W*num_anchors]
         box_scale = box_scale.reshape(-1, 1)
         # [B, H*W, num_anchors, num_classes] -> [B*H*W*num_anchors, num_classes]
-        # class_target = class_target.reshape(-1, self.num_classes)
-        class_target = class_target.reshape(-1).long()
+        class_target = class_target.reshape(-1, self.num_classes)
+        # class_target = class_target.reshape(-1).long()
         class_mask = class_mask.reshape(-1)
 
         return iou_target, iou_mask, box_target, box_mask, box_scale, class_target, class_mask
@@ -323,7 +323,7 @@ class YOLOv3Loss(nn.Module):
         # [B, H, W, num_anchors, 5+num_classes] -> [B, H*W*num_anchors, 5+num_classes]
         outputs = outputs.reshape(B, -1, n_ch)
         # x/y/conf/class compress to [0,1]
-        outputs[..., np.r_[:2, 4:5]] = torch.sigmoid(outputs[..., np.r_[:2, 4:5]])
+        # outputs[..., np.r_[:2, 4:5]] = torch.sigmoid(outputs[..., np.r_[:2, 4:5]])
         # exp()
         outputs[..., 2:4] = torch.exp(outputs[..., 2:4])
 
@@ -338,28 +338,42 @@ class YOLOv3Loss(nn.Module):
         # box loss
         pred_deltas = pred_deltas[box_mask > 0]
         box_target = box_target[box_mask > 0]
+        assert pred_deltas.shape == box_target.shape
+
         box_scale = torch.sqrt(box_scale[box_mask > 0])
-        box_loss = F.mse_loss(pred_deltas * box_scale, box_target * box_scale, reduction='sum')
+
+        box_xy_loss = F.binary_cross_entropy_with_logits(pred_deltas[..., :2], box_target[..., :2],
+                                                         weight=box_scale * box_scale, reduction='sum')
+        box_wh_loss = F.mse_loss(pred_deltas[..., 2:4] * box_scale, box_target[..., 2:4] * box_scale,
+                                 reduction='sum') / 2.0
+        # box_loss = F.mse_loss(pred_deltas * box_scale, box_target * box_scale, reduction='sum')
 
         # --------------------------------------
         # iou loss
         obj_pred_confs = pred_confs[iou_mask == 2]
         obj_iou_target = iou_target[iou_mask == 2]
-        obj_iou_loss = F.mse_loss(obj_pred_confs, obj_iou_target, reduction='sum')
+        assert obj_pred_confs.shape == obj_iou_target.shape
+        # obj_iou_loss = F.mse_loss(obj_pred_confs, obj_iou_target, reduction='sum')
+        obj_iou_loss = F.binary_cross_entropy_with_logits(obj_pred_confs, obj_iou_target, reduction='sum')
 
         noobj_pred_confs = pred_confs[iou_mask == 1]
         noobj_iou_target = iou_target[iou_mask == 1]
-        noobj_iou_loss = F.mse_loss(noobj_pred_confs, noobj_iou_target, reduction='sum')
+        assert noobj_pred_confs.shape == noobj_iou_target.shape
+        # noobj_iou_loss = F.mse_loss(noobj_pred_confs, noobj_iou_target, reduction='sum')
+        noobj_iou_loss = F.binary_cross_entropy_with_logits(noobj_pred_confs, noobj_iou_target, reduction='sum')
 
         # --------------------------------------
         # class loss
         # ignore the gradient of noobject's target
         pred_probs = pred_probs[class_mask > 0]
         class_target = class_target[class_mask > 0]
-        class_loss = F.cross_entropy(pred_probs, class_target, reduction='sum')
+        assert pred_probs.shape == class_target.shape
+        # class_loss = F.cross_entropy(pred_probs, class_target, reduction='sum')
+        class_loss = F.binary_cross_entropy_with_logits(pred_probs, class_target, reduction='sum')
 
         # calculate the loss, normalized by batch size.
-        loss = box_loss * self.coord_scale + \
+        # loss = box_loss * self.coord_scale + \
+        loss = (box_xy_loss + box_wh_loss) * self.coord_scale + \
                obj_iou_loss * self.obj_scale + noobj_iou_loss * self.noobj_scale + \
                class_loss * self.class_scale
         return loss / B
