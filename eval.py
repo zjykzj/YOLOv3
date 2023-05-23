@@ -17,36 +17,42 @@ from yolo.data.build import build_data
 from yolo.engine.infer import validate
 from yolo.model.build import build_model
 
+from yolo.util import logging
+
+logger = logging.get_logger(__name__)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="YOLO Eval.")
     parser.add_argument('data', metavar='DIR', help='Path to dataset')
-    parser.add_argument('-c', '--cfg', type=str, default='configs/yolov2_voc.cfg', help='Path to configs file')
+    parser.add_argument('-c', '--cfg', type=str, default='configs/yolov2_voc.cfg', help='Path to config file')
     parser.add_argument('-ckpt', '--checkpoint', type=str, help='Path to checkpoint file')
 
     parser.add_argument('--traversal', default=False, action="store_true", help='Using different input size.')
     parser.add_argument('--channels-last', type=bool, default=False)
     args = parser.parse_args()
-    print("args:", args)
+    logger.info(f"args: {args}")
 
-    # Parse configs settings
+    # Parse config settings
     with open(args.cfg, 'r') as f:
         cfg = yaml.safe_load(f)
-    print("cfg:", cfg)
+    logger.info(f"cfg: {cfg}")
 
     return args, cfg
 
 
 def main():
+    logging.setup_logging(local_rank=0, output_dir=None)
+
     args, cfg = parse_args()
-    print("=> successfully loaded configs file: ", args.cfg)
+    logger.info(f"=> successfully loaded config file: {args.cfg}")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = build_model(args, cfg, device=device)
     model.eval()
 
     if args.checkpoint:
-        print("=> loading checkpoint '{}'".format(args.checkpoint))
+        logger.info("=> loading checkpoint '{}'".format(args.checkpoint))
         checkpoint = torch.load(args.checkpoint, map_location=device)
 
         state_dict = {key.replace("module.", ""): value for key, value in checkpoint['state_dict'].items()}
@@ -61,7 +67,7 @@ def main():
     else:
         item_list = [int(cfg['TEST']['IMGSIZE'] / 32 - 10)]
 
-    print("=> Begin evaluating ...")
+    logger.info("=> Begin evaluating ...")
     res_list = list()
 
     for i in item_list:
@@ -74,13 +80,13 @@ def main():
         ap50_95, ap50 = validate(
             val_loader, val_evaluator, model,
             num_classes=num_classes, conf_thresh=conf_thresh, nms_thresh=nms_thresh, device=device)
-        print(f"Input Size：[{input_size}x{input_size}] ap50_95: = {ap50_95:.4f} ap50: = {ap50:.4f}")
+        logger.info(f"Input Size：[{input_size}x{input_size}] ap50_95: = {ap50_95:.4f} ap50: = {ap50:.4f}")
         res_list.append([input_size, ap50_95, ap50])
 
-    print("=> End")
+    logger.info("=> End")
     for item in res_list:
         input_size, ap50_95, ap50 = item
-        print(f"Input Size：[{input_size}x{input_size}] ap50_95: = {ap50_95:.4f} ap50: = {ap50:.4f}")
+        logger.info(f"Input Size：[{input_size}x{input_size}] ap50_95: = {ap50_95:.4f} ap50: = {ap50:.4f}")
 
 
 if __name__ == '__main__':

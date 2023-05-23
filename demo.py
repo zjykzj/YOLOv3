@@ -26,9 +26,13 @@ from torch.nn import Module
 
 from yolo.model.build import build_model
 from yolo.data.dataset.vocdataset import VOCDataset
+from yolo.data.dataset.cocodataset import COCODataset
 from yolo.data.transform import Transform
 from yolo.util.utils import postprocess
 from yolo.util.box_utils import yolobox2label
+from yolo.util import logging
+
+logger = logging.get_logger(__name__)
 
 
 def parse_args():
@@ -44,9 +48,12 @@ def parse_args():
     parser.add_argument('-n', '--nms-thresh', type=float, default=None, help='NMS Threshold')
     parser.add_argument('--channels-last', type=bool, default=False)
     args = parser.parse_args()
+    logger.info(f"args: {args}")
 
     with open(args.cfg, 'r') as f:
         cfg = yaml.safe_load(f)
+    logger.info(f"cfg: {cfg}")
+
     return args, cfg
 
 
@@ -71,7 +78,7 @@ def image_preprocess(args: Namespace, cfg: Dict):
         img, _, img_info = transform(0, img, np.array([]), imgsize)
         # [H, W, C] -> [C, H, W]
         img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
-        print("img:", img.shape)
+        logger.info(f"img: {img.shape}")
 
         img_list.append(img)
         img_raw_list.append(img_raw)
@@ -87,7 +94,7 @@ def image_preprocess(args: Namespace, cfg: Dict):
             img, _, img_info = transform(i, img, np.array([]), imgsize)
             # [H, W, C] -> [C, H, W]
             img = torch.from_numpy(img).permute(2, 0, 1).contiguous() / 255
-            print("img:", img.shape)
+            logger.info(f"img: {img.shape}")
 
             img_list.append(img)
             img_raw_list.append(img_raw)
@@ -105,7 +112,7 @@ def model_init(args: Namespace, cfg: Dict):
 
     assert args.ckpt, '--ckpt must be specified'
     if args.ckpt:
-        print("=> loading checkpoint '{}'".format(args.ckpt))
+        logger.info("=> loading checkpoint '{}'".format(args.ckpt))
         checkpoint = torch.load(args.ckpt, map_location=device)
 
         state_dict = {key.replace("module.", ""): value for key, value in checkpoint['state_dict'].items()}
@@ -115,7 +122,7 @@ def model_init(args: Namespace, cfg: Dict):
     return model, device
 
 
-def parse_info(outputs: List, info_img: List or Tuple):
+def parse_info(outputs: List, info_img: List or Tuple, classes: List):
     import random
 
     bboxes = list()
@@ -130,12 +137,12 @@ def parse_info(outputs: List, info_img: List or Tuple):
     # cls_pred: 分类下标
     for x1, y1, x2, y2, conf, cls_conf, cls_pred in outputs:
         cls_id = int(cls_pred)
-        label = VOCDataset.classes[cls_id]
+        label = classes[cls_id]
 
         random.seed(cls_id)
 
-        print(int(x1), int(y1), int(x2), int(y2), float(conf), int(cls_pred))
-        print('\t+ Label: %s, Conf: %.5f' % (label, cls_conf.item()))
+        logger.info(f"{int(x1)}, {int(y1)}, {int(x2)}, {int(y2)}, {float(conf)}, {int(cls_pred)}")
+        logger.info('\t+ Label: %s, Conf: %.5f' % (label, cls_conf.item()))
         y1, x1, y2, x2 = yolobox2label([y1, x1, y2, x2], info_img)
         bboxes.append([x1, y1, x2, y2])
         labels.append(label)
@@ -196,15 +203,17 @@ def main():
     5. 预测框坐标转换
     6. 预测框绘制
     """
-    args, cfg = parse_args()
-    print("args:", args)
+    logging.setup_logging(local_rank=0, output_dir=None)
 
-    print("=> Image Prerocess")
+    args, cfg = parse_args()
+    logger.info(f"=> successfully loaded config file: {args.cfg}")
+
+    logger.info("=> Image Prerocess")
     img_list, img_raw_list, img_info_list, img_path_list = image_preprocess(args, cfg)
-    print("=> Model Init")
+    logger.info("=> Model Init")
     model, device = model_init(args, cfg)
 
-    print("=> Process")
+    logger.info("=> Process")
     conf_thre = cfg['TEST']['CONFTHRE']
     nms_thre = cfg['TEST']['NMSTHRE']
     if args.conf_thresh:
@@ -213,24 +222,32 @@ def main():
         nms_thre = args.nms_thresh
     num_classes = cfg['MODEL']['N_CLASSES']
 
+    data_type = cfg['DATA']['TYPE']
+    if 'PASCAL VOC' == data_type:
+        classes = VOCDataset.classes
+    elif 'COCO' == data_type:
+        classes = COCODataset.classes
+    else:
+        raise ValueError(f"{data_type} doesn't supports")
+
     save_dir = os.path.join(args.outputs, args.exp)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
     for input_data, img_raw, img_info, img_path in zip(img_list, img_raw_list, img_info_list, img_path_list):
-        print(f"Process {img_path}")
+        logger.info(f"Process {img_path}")
         outputs = process(input_data, model, device, conf_thre=conf_thre, nms_thre=nms_thre, num_classes=num_classes)
         if outputs[0] is None:
-            print("No Objects Deteted!!")
+            logger.info("No Objects Deteted!!")
             continue
 
-        print("Parse INFO")
-        bboxes, confs, labels, colors = parse_info(outputs[0], img_info[:6])
+        logger.info("Parse INFO")
+        bboxes, confs, labels, colors = parse_info(outputs[0], img_info[:6], classes)
         draw_image = draw_bbox(img_raw, bboxes, confs, labels, colors)
 
         img_name = os.path.basename(img_path)
         draw_image_path = os.path.join(save_dir, img_name)
-        print(f"\t+ img path: {draw_image_path}")
+        logger.info(f"\t+ img path: {draw_image_path}")
         cv2.imwrite(draw_image_path, draw_image)
 
 
