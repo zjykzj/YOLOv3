@@ -15,7 +15,7 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
-* Train 120 rounds with [yolov3_default.cfg](./config/yolov3_default.cfg) and verify with COCO val2017. Compare with other results (training 300 rounds) as follows:
+* Train using the `COCO train2017` dataset and test using the `COCO val2017` dataset with an input size of `416x416`. give the result as follows (*No version of the COCO dataset used in the paper was found*)
 
 <!-- <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
@@ -23,48 +23,39 @@
   overflow:hidden;padding:10px 5px;word-break:normal;}
 .tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
   font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg .tg-c3ow{border-color:inherit;text-align:center;vertical-align:top}
-.tg .tg-7btt{border-color:inherit;font-weight:bold;text-align:center;vertical-align:top}
+.tg .tg-zkss{background-color:#FFF;border-color:inherit;color:#333;text-align:center;vertical-align:top}
+.tg .tg-baqh{text-align:center;vertical-align:top}
+.tg .tg-fr9f{background-color:#FFF;border-color:inherit;color:#333;font-weight:bold;text-align:center;vertical-align:top}
+.tg .tg-y5w1{background-color:#FFF;border-color:inherit;color:#00E;font-weight:bold;text-align:center;vertical-align:top}
+.tg .tg-9y4h{background-color:#FFF;border-color:inherit;color:#1F2328;text-align:center;vertical-align:middle}
 </style> -->
 <table class="tg">
 <thead>
   <tr>
-    <th class="tg-c3ow"></th>
-    <th class="tg-7btt"><span style="font-style:normal">Original (darknet)</span></th>
-    <th class="tg-7btt">DeNA/PyTorch_YOLOv3</th>
-    <th class="tg-7btt">zjykzj/YOLOv3(This)</th>
+    <th class="tg-fr9f"></th>
+    <th class="tg-fr9f"><span style="font-style:normal">Original (darknet)</span></th>
+    <th class="tg-y5w1">DeNA/PyTorch_YOLOv3</th>
+    <th class="tg-y5w1"><span style="font-weight:700;font-style:normal">zjykzj/YOLOv3(This)</span></th>
   </tr>
 </thead>
 <tbody>
   <tr>
-    <td class="tg-7btt">COCO AP[IoU=0.50:0.95], inference</td>
-    <td class="tg-c3ow">0.310</td>
-    <td class="tg-c3ow">0.311</td>
-    <td class="tg-c3ow">0.315</td>
+    <td class="tg-fr9f">ARCH</td>
+    <td class="tg-zkss">YOLOv3</td>
+    <td class="tg-zkss">YOLOv3</td>
+    <td class="tg-zkss">YOLOv3</td>
   </tr>
   <tr>
-    <td class="tg-7btt">COCO AP[IoU=0.50], inference</td>
-    <td class="tg-c3ow">0.553</td>
-    <td class="tg-c3ow">0.558</td>
-    <td class="tg-c3ow">0.543</td>
+    <td class="tg-fr9f">COCO AP[IoU=0.50:0.95]</td>
+    <td class="tg-zkss">0.310</td>
+    <td class="tg-9y4h">0.311</td>
+    <td class="tg-9y4h">0.259</td>
   </tr>
   <tr>
-    <td class="tg-7btt">conf_thre</td>
-    <td class="tg-c3ow">/</td>
-    <td class="tg-c3ow">0.005</td>
-    <td class="tg-c3ow">0.005</td>
-  </tr>
-  <tr>
-    <td class="tg-7btt">nms_thre</td>
-    <td class="tg-c3ow">/</td>
-    <td class="tg-c3ow">0.45</td>
-    <td class="tg-c3ow">0.45</td>
-  </tr>
-  <tr>
-    <td class="tg-7btt">input_size</td>
-    <td class="tg-c3ow">416</td>
-    <td class="tg-c3ow">416</td>
-    <td class="tg-c3ow">416</td>
+    <td class="tg-baqh">COCO AP[IoU=0.50]</td>
+    <td class="tg-baqh">0.553</td>
+    <td class="tg-baqh">0.558</td>
+    <td class="tg-baqh">0.466</td>
   </tr>
 </tbody>
 </table>
@@ -74,12 +65,15 @@
 - [Table of Contents](#table-of-contents)
 - [Latest News](#latest-news)
 - [Background](#background)
+- [Prepare Data](#prepare-data)
+  - [Pascal VOC](#pascal-voc)
+  - [COCO](#coco)
 - [Installation](#installation)
   - [Requirements](#requirements)
   - [Container](#container)
 - [Usage](#usage)
   - [Train](#train)
-  - [Test](#test)
+  - [Eval](#eval)
   - [Demo](#demo)
 - [Maintainers](#maintainers)
 - [Thanks](#thanks)
@@ -88,14 +82,35 @@
 
 ## Latest News
 
-* **16/04/2023: Optimized version, fixed preprocessing implementation, YOLOv3 network performance close to the original paper implementation.** [19fa7a4](https://github.com/zjykzj/YOLOv3/releases/tag/v2.0)
-* **16/02/2023: Initial version, implementing preliminary YOLOv3 network training and inference implementation.** [9bf224f](https://github.com/zjykzj/YOLOv3/releases/tag/v1.0)
+* ***[2023/04/16]Optimized version ([v2.0](https://github.com/zjykzj/YOLOv3/releases/tag/v2.0)). Fixed preprocessing implementation, YOLOv3 network performance close to the original paper implementation.***
+* ***[2023/02/16]Initial version ([v1.0](https://github.com/zjykzj/YOLOv3/releases/tag/v1.0)). implementing preliminary YOLOv3 network training and inference implementation.***
 
 ## Background
 
-The purpose of creating this warehouse is to better understand the YOLO series object detection network. Note: The
-realization of the project depends heavily on the implementation
+The purpose of creating this warehouse is to better understand the YOLO series object detection network. Note: The realization of the project depends heavily on the implementation
 of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [NVIDIA/apex](https://github.com/NVIDIA/apex)
+
+## Prepare Data
+
+### Pascal VOC
+
+Use this script [voc2yolov5.py](https://github.com/zjykzj/vocdev/blob/master/py/voc2yolov5.py)
+
+```shell
+python voc2yolov5.py -s /home/zj/data/voc -d /home/zj/data/voc/voc2yolov5-train -l trainval-2007 trainval-2012
+python voc2yolov5.py -s /home/zj/data/voc -d /home/zj/data/voc/voc2yolov5-val -l test-2007
+```
+
+Then softlink the folder where the dataset is located to the specified location:
+
+```shell
+ln -s /path/to/voc /path/to/YOLOv3/../datasets/voc
+```
+
+### COCO
+
+Use this script [get_coco.sh](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh)
+
 
 ## Installation
 
@@ -122,44 +137,55 @@ docker run --gpus all -it --rm -v </path/to/YOLOv3>:/app/YOLOv3 -v </path/to/COC
 * One GPU
 
 ```shell
-CUDA_VISIBLE_DEVICES=0 python main_amp.py -c config/yolov3_default.cfg --opt-level=O0 COCO
+CUDA_VISIBLE_DEVICES=0 python main_amp.py -c configs/yolov3_voc.cfg --opt-level=O1 ../datasets/voc
 ```
 
-* Multi GPU
+* Multi-GPUs
 
 ```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "32111" main_amp.py -c config/yolov3_default.cfg --opt-level=O0 COCO
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "36321" main_amp.py -c configs/yolov3_coco.cfg --opt-level=O1 ../datasets/coco
 ```
 
-### Test
+### Eval
 
 ```shell
-CUDA_VISIBLE_DEVICES=1 python eval.py --cfg config/yolov3_default.cfg --checkpoint outputs/yolov3_default/checkpoint_79.pth.tar COCO
-```
-
-```text
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.315
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.543
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.327
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.132
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.344
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.470
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.271
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.415
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.439
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.239
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.473
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.597
+python eval.py -c configs/yolov3_coco.cfg -ckpt outputs/yolov3_coco/model_best.pth.tar --traversal ../datasets/coco
+Input Size：[320x320] ap50_95: = 0.2452 ap50: = 0.4456
+Input Size：[352x352] ap50_95: = 0.2524 ap50: = 0.4565
+Input Size：[384x384] ap50_95: = 0.2551 ap50: = 0.4585
+Input Size：[416x416] ap50_95: = 0.2593 ap50: = 0.4657
+Input Size：[448x448] ap50_95: = 0.2604 ap50: = 0.4651
+Input Size：[480x480] ap50_95: = 0.2568 ap50: = 0.4590
+Input Size：[512x512] ap50_95: = 0.2574 ap50: = 0.4598
+Input Size：[544x544] ap50_95: = 0.2530 ap50: = 0.4538
+Input Size：[576x576] ap50_95: = 0.2496 ap50: = 0.4506
+Input Size：[608x608] ap50_95: = 0.2440 ap50: = 0.4417
+python eval.py -c configs/yolov3_voc.cfg -ckpt outputs/yolov3_voc/model_best.pth.tar --traversal ../datasets/voc
+Input Size：[320x320] ap50_95: = -1.0000 ap50: = 0.7377
+Input Size：[352x352] ap50_95: = -1.0000 ap50: = 0.7528
+Input Size：[384x384] ap50_95: = -1.0000 ap50: = 0.7616
+Input Size：[416x416] ap50_95: = -1.0000 ap50: = 0.7693
+Input Size：[448x448] ap50_95: = -1.0000 ap50: = 0.7752
+Input Size：[480x480] ap50_95: = -1.0000 ap50: = 0.7741
+Input Size：[512x512] ap50_95: = -1.0000 ap50: = 0.7753
+Input Size：[544x544] ap50_95: = -1.0000 ap50: = 0.7825
+Input Size：[576x576] ap50_95: = -1.0000 ap50: = 0.7755
+Input Size：[608x608] ap50_95: = -1.0000 ap50: = 0.7733
 ```
 
 ### Demo
 
 ```shell
-python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/checkpoint_79.pth.tar --image data/bus.jpg --conf-thresh 0.5 --nms-thresh 0.45
-python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/checkpoint_79.pth.tar --image data/zidane.jpg --conf-thresh 0.5 --nms-thresh 0.45
+python demo.py -c 0.6 configs/yolov3_voc.cfg outputs/yolov3_voc/model_best.pth.tar --exp voc assets/voc2007-test/
 ```
 
-<p align="left"><img src="assets/bus.jpg" height="240"\>  <img src="assets/zidane.jpg" height="240"\></p>
+<p align="left"><img src="results/voc/000237.jpg" height="240"\>  <img src="results/voc/000386.jpg" height="240"\></p>
+
+```shell
+python demo.py -c 0.6 configs/yolov3_coco.cfg outputs/yolov3_coco/model_best.pth.tar --exp coco assets/coco/
+```
+
+<p align="left"><img src="results/coco/bus.jpg" height="240"\>  <img src="results/coco/zidane.jpg" height="240"\></p>
 
 ## Maintainers
 
@@ -171,6 +197,7 @@ python demo.py --cfg config/yolov3_default.cfg --ckpt outputs/yolov3_default/che
 * [NVIDIA/apex](https://github.com/NVIDIA/apex)
 * [ZJCV/ZCls2](https://github.com/ZJCV/ZCls2)
 * [ultralytics/yolov5](https://github.com/ultralytics/yolov5)
+* [zjykzj/YOLOv2](https://github.com/zjykzj/YOLOv2)
 
 ## Contributing
 
