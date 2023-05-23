@@ -221,5 +221,4 @@ cython_debug/
 
 /weights/
 /outputs/
-/results/
 /darknet/weights/
