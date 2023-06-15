@@ -82,9 +82,9 @@
 
 ## Latest News
 
-* ***[2023/05/24]Refactor version ([v3.0](https://github.com/zjykzj/YOLOv3/releases/tag/v3.0)). Refer to [zjykzj/YOLOv2](https://github.com/zjykzj/YOLOv2) to reconstruct the entire project and train `Pascal VOC` and `COCO` datasets with `YOLOv2Loss`.***
-* ***[2023/04/16]Optimized version ([v2.0](https://github.com/zjykzj/YOLOv3/releases/tag/v2.0)). Fixed preprocessing implementation, YOLOv3 network performance close to the original paper implementation.***
-* ***[2023/02/16]Initial version ([v1.0](https://github.com/zjykzj/YOLOv3/releases/tag/v1.0)). implementing preliminary YOLOv3 network training and inference implementation.***
+* ***[2023/05/24][v3.0](https://github.com/zjykzj/YOLOv3/releases/tag/v3.0). Refer to [zjykzj/YOLOv2](https://github.com/zjykzj/YOLOv2) to reconstruct the entire project and train `Pascal VOC` and `COCO` datasets with `YOLOv2Loss`.***
+* ***[2023/04/16][v2.0](https://github.com/zjykzj/YOLOv3/releases/tag/v2.0). Fixed preprocessing implementation, YOLOv3 network performance close to the original paper implementation.***
+* ***[2023/02/16][v1.0](https://github.com/zjykzj/YOLOv3/releases/tag/v1.0). implementing preliminary YOLOv3 network training and inference implementation.***
 
 ## Background
 
