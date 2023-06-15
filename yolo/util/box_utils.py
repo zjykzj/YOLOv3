@@ -9,6 +9,8 @@
 
 import copy
 
+from numpy import ndarray
+
 import torch
 from torch import Tensor
 
@@ -123,17 +125,20 @@ def bboxes_iou(bboxes_a: Tensor, bboxes_b: Tensor, xyxy=True) -> Tensor:
     return area_i / (area_a[:, None] + area_b - area_i)
 
 
-def label2yolobox(labels):
+def label2yolobox(labels: ndarray):
     """
     Transform coco labels to yolo box labels
     """
+    assert isinstance(labels, ndarray)
+    assert len(labels.shape) == 2 and labels.shape[1] == 4
+
     # x1/y1/w/h -> x1/y1/x2/y2
     x1 = labels[..., 0]
     y1 = labels[..., 1]
     x2 = (labels[..., 0] + labels[..., 2])
     y2 = (labels[..., 1] + labels[..., 3])
 
-    # x1/y1/x2/y2 -> xc/yc/w/h
+    # x1/y1/w/h -> xc/yc/w/h
     labels[..., 0] = ((x1 + x2) / 2)
     labels[..., 1] = ((y1 + y2) / 2)
     return labels
