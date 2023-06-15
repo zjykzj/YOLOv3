@@ -26,7 +26,7 @@ def custom_collate(batch):
     targets = [item[1] for item in batch]
 
     # Data preprocess
-    # [H, W, C] -> [C, H, W] -> Normalize
+    # [B, H, W, C] -> [B, C, H, W] -> Normalize
     images = torch.from_numpy(np.array(images)).permute(0, 3, 1, 2).contiguous() / 255
 
     if not isinstance(targets[0], Target):
@@ -76,17 +76,13 @@ def build_data(cfg: Dict, data_root: str, is_train: bool = False, is_distributed
     if is_distributed and is_train:
         sampler = torch.utils.data.distributed.DistributedSampler(dataset)
 
-    if is_train:
-        collate_fn = torch.utils.data.default_collate
-    else:
-        collate_fn = custom_collate
     dataloader = torch.utils.data.DataLoader(dataset,
                                              batch_size=cfg['DATA']['BATCH_SIZE'],
                                              shuffle=(sampler is None and is_train),
                                              num_workers=cfg['DATA']['WORKERS'],
                                              sampler=sampler,
                                              pin_memory=True,
-                                             collate_fn=collate_fn
+                                             collate_fn=custom_collate
                                              )
 
     return dataloader, sampler, evaluator
