@@ -13,7 +13,8 @@ from typing import Dict
 import torch
 
 from .yolov3 import YOLOv3
-from .yololoss import YOLOv3Loss
+# from .yololoss import YOLOv3Loss
+from .yololoss_v2 import YOLOLoss
 
 
 def build_model(args: Namespace, cfg: Dict, device=None):
@@ -41,14 +42,19 @@ def build_criterion(cfg: Dict, device=None):
     loss_type = cfg['CRITERION']['TYPE']
     if 'YOLOv3Loss' == loss_type:
         anchors = torch.FloatTensor(cfg['MODEL']['ANCHORS'])
-        criterion = YOLOv3Loss(anchors,
-                               num_classes=cfg['MODEL']['N_CLASSES'],
-                               ignore_thresh=cfg['CRITERION']['IGNORE_THRESH'],
-                               coord_scale=cfg['CRITERION']['COORD_SCALE'],
-                               noobj_scale=cfg['CRITERION']['NOOBJ_SCALE'],
-                               obj_scale=cfg['CRITERION']['OBJ_SCALE'],
-                               class_scale=cfg['CRITERION']['CLASS_SCALE'],
-                               ).to(device)
+        # criterion = YOLOv3Loss(anchors,
+        #                        num_classes=cfg['MODEL']['N_CLASSES'],
+        #                        ignore_thresh=cfg['CRITERION']['IGNORE_THRESH'],
+        #                        coord_scale=cfg['CRITERION']['COORD_SCALE'],
+        #                        noobj_scale=cfg['CRITERION']['NOOBJ_SCALE'],
+        #                        obj_scale=cfg['CRITERION']['OBJ_SCALE'],
+        #                        class_scale=cfg['CRITERION']['CLASS_SCALE'],
+        #                        ).to(device)
+        criterion = YOLOLoss(anchors,
+                             n_classes=cfg['MODEL']['N_CLASSES'],
+                             ignore_thresh=cfg['CRITERION']['IGNORE_THRESH'],
+                             device=device
+                             ).to(device)
     else:
         raise ValueError(f"{loss_type} doesn't supports")
     return criterion
