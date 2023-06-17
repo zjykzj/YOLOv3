@@ -155,23 +155,19 @@ class COCODataset(Dataset):
         # cv2.waitKey(0)
         # # cv2.imwrite("dst_img.jpg", dst_img)
 
-        # Data preprocess
-        # [H, W, C] -> [C, H, W] -> Normalize
-        image = torch.from_numpy(image.astype(float)).permute(2, 0, 1).contiguous() / 255
-
         return image, img_info, labels
 
     def build_target(self, labels: ndarray, img_info: List, img_id: Union[int, str]):
         assert isinstance(labels, ndarray)
+        target = torch.zeros((self.max_det_nums, 5))
         if len(labels) > 0:
             # 将数值缩放到[0, 1]区间
             labels[:, 1:] = labels[:, 1:] / self.target_size
             # [x1, y1, w, h] -> [xc, yc, w, h]
             labels[:, 1:] = label2yolobox(labels[:, 1:])
 
-        target = torch.zeros((self.max_det_nums, 5))
-        for i, label in enumerate(labels[:self.max_det_nums]):
-            target[i, :] = torch.from_numpy(label)
+            for i, label in enumerate(labels[:self.max_det_nums]):
+                target[i, :] = torch.from_numpy(label)
 
         if self.train:
             return target

@@ -27,7 +27,7 @@ def custom_collate(batch):
 
     # Data preprocess
     # [B, H, W, C] -> [B, C, H, W] -> Normalize
-    images = torch.from_numpy(np.array(images)).permute(0, 3, 1, 2).contiguous() / 255
+    images = torch.from_numpy(np.array(images, dtype=float)).permute(0, 3, 1, 2).contiguous() / 255
 
     if not isinstance(targets[0], Target):
         targets = torch.stack(targets)
