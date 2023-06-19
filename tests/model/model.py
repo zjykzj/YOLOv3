@@ -34,6 +34,15 @@ def init():
         torch.backends.cudnn.benchmark = False
 
 
+def load_cfg(cfg_file):
+    with open(cfg_file, 'r') as f:
+        import yaml
+
+        cfg = yaml.safe_load(f)
+
+    return cfg
+
+
 def test_backbone():
     data = torch.randn(1, 3, 608, 608)
 
@@ -105,12 +114,9 @@ def test_head():
     print(o1.shape, o2.shape, o3.shape)
 
 
-def test_yolov3():
-    cfg_file = 'configs/yolov3_default.cfg'
-    with open(cfg_file, 'r') as f:
-        import yaml
-
-        cfg = yaml.safe_load(f)
+def test_yolov3(cfg_file):
+    cfg = load_cfg(cfg_file)
+    print(f"load cfg: {cfg_file}")
 
     # data = torch.randn((1, 3, 416, 416))
     # data = torch.randn((1, 3, 608, 608))
@@ -140,7 +146,13 @@ def test_yolov3():
 
 
 if __name__ == '__main__':
-    # test_backbone()
-    # test_neck()
-    # test_head()
-    test_yolov3()
+    import random
+
+    random.seed(10)
+
+    cfg_file = 'tests/model/yolov3.cfg'
+
+    test_backbone()
+    test_neck()
+    test_head()
+    test_yolov3(cfg_file)
