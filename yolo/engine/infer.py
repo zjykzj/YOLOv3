@@ -40,7 +40,7 @@ def validate(val_loader: DataLoader,
     for i, (input_data, targets) in enumerate(tqdm(val_loader)):
         # 模型推理，返回预测结果
         # img: [B, 3, 416, 416]
-        outputs = model(input_data.to(device))
+        outputs = model(input_data.to(device=device, dtype=torch.float))
         # 后处理，进行置信度阈值过滤 + NMS阈值过滤
         # 输入outputs: [B, 预测框数目, 85(xywh + obj_confg + num_classes)]
         # 输出outputs: [B, 过滤后的预测框数目, 7(xyxy + obj_conf + cls_prob + cls_id)]
