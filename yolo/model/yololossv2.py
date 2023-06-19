@@ -5,6 +5,12 @@
 @file: yololoss.py
 @author: zj
 @description:
+
+RuntimeError: torch.nn.functional.binary_cross_entropy and torch.nn.BCELoss are unsafe to autocast.
+Many models use a sigmoid layer right before the binary cross entropy layer.
+In this case, combine the two layers using torch.nn.functional.binary_cross_entropy_with_logits
+or torch.nn.BCEWithLogitsLoss.  binary_cross_entropy_with_logits and BCEWithLogits are
+safe to autocast.
 """
 from typing import List
 
@@ -94,19 +100,16 @@ def bboxes_iou(bboxes_a, bboxes_b, xyxy=True):
     return area_i / (area_a[:, None] + area_b - area_i)
 
 
-class YOLOv3Loss(nn.Module):
+class YOLOv3LossV2(nn.Module):
     strides = [32, 16, 8]
     anchor_masks = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
 
     def __init__(self, anchors, n_classes, ignore_thresh=0.7, device=None):
-        super(YOLOv3Loss, self).__init__()
+        super(YOLOv3LossV2, self).__init__()
         self.anchors = anchors
         self.n_classes = n_classes
         self.ignore_thresh = ignore_thresh
         self.device = device
-
-        self.l2_loss = nn.MSELoss(reduction="sum").to(device)
-        self.bce_loss = nn.BCELoss(reduction="sum").to(device)
 
     def build_target(self, pred: Tensor, labels: Tensor):
         B, _, H, W, _ = pred.shape
@@ -240,13 +243,13 @@ class YOLOv3Loss(nn.Module):
         # Reshape
         outputs = outputs.reshape(B, self.num_anchors, n_ch, H, W).permute(0, 1, 3, 4, 2)
 
-        outputs[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(outputs[..., np.r_[:2, 4:n_ch]])
+        # outputs[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(outputs[..., np.r_[:2, 4:n_ch]])
 
         pred = outputs.clone()
 
         # logistic activation
         # xy + obj_pred + cls_pred
-        # pred[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(pred[..., np.r_[:2, 4:n_ch]])
+        pred[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(pred[..., np.r_[:2, 4:n_ch]])
 
         # b_x = sigmoid(t_x) + c_x
         # b_y = sigmoid(t_y) + c_y
@@ -298,24 +301,11 @@ class YOLOv3Loss(nn.Module):
         target[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
         target[..., 2:4] *= tgt_scale
 
-        # 加权二值交叉熵损失
-        bceloss = nn.BCELoss(weight=tgt_scale * tgt_scale, reduction="sum").to(self.device)  # weighted BCEloss
-        # 计算预测框xc/yc的损失
-        loss_xy = bceloss(output[..., :2], target[..., :2])
-        # 计算预测框w/h的损失
-        loss_wh = self.l2_loss(output[..., 2:4], target[..., 2:4]) / 2
-        # 计算目标置信度损失
-        loss_obj = self.bce_loss(output[..., 4], target[..., 4])
-        # 计算各个类别的分类概率损失
-        loss_cls = self.bce_loss(output[..., 5:], target[..., 5:])
-        # 计算统一损失
-        loss_l2 = self.l2_loss(output, target)
-
-        # loss_xy = F.binary_cross_entropy_with_logits(
-        #     output[..., :2], target[..., :2], weight=tgt_scale * tgt_scale, reduction='sum')
-        # loss_wh = F.mse_loss(output[..., 2:4], target[..., 2:4], reduction='sum') / 2
-        # loss_obj = F.binary_cross_entropy_with_logits(output[..., 4], target[..., 4], reduction='sum')
-        # loss_cls = F.binary_cross_entropy_with_logits(output[..., 5:], target[..., 5:], reduction='sum')
+        loss_xy = F.binary_cross_entropy_with_logits(
+            output[..., :2], target[..., :2], weight=tgt_scale * tgt_scale, reduction='sum')
+        loss_wh = F.mse_loss(output[..., 2:4], target[..., 2:4], reduction='sum') / 2
+        loss_obj = F.binary_cross_entropy_with_logits(output[..., 4], target[..., 4], reduction='sum')
+        loss_cls = F.binary_cross_entropy_with_logits(output[..., 5:], target[..., 5:], reduction='sum')
 
         loss = loss_xy + loss_wh + loss_obj + loss_cls
         return loss
