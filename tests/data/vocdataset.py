@@ -75,6 +75,7 @@ def test_train(cfg_file, name):
     end = time.time()
     for i in range(len(train_dataset)):
         image, target = train_dataset.__getitem__(i)
+        image = torch.from_numpy(image)
         images = image.unsqueeze(0)
         targets = target.unsqueeze(0)
 
@@ -115,6 +116,7 @@ def test_val(cfg_file, name):
     end = time.time()
     for i in range(len(val_dataset)):
         image, target = val_dataset.__getitem__(i)
+        image = torch.from_numpy(image)
         assert isinstance(target, Target)
         print(i, image.shape, target.target.shape, len(target.img_info), target.img_id)
 
