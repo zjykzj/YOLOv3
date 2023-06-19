@@ -52,24 +52,15 @@ def make_deltas(box1: Tensor, box2: Tensor) -> Tensor:
 
 
 def build_mask(B, H, W, num_anchors=3, num_classes=20, dtype=torch.float, device=torch.device('cpu')):
-    # [B, H*W, num_anchors, 1]
-    iou_target = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
-    # [B, H*W, num_anchors, 1]
-    iou_mask = torch.ones((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
+    iou_target = torch.zeros((B, num_anchors, H * W, 1)).to(dtype=dtype, device=device)
+    iou_mask = torch.ones((B, num_anchors, H * W, 1)).to(dtype=dtype, device=device)
 
-    # [B, H*W, num_anchors, 4]
-    box_target = torch.zeros((B, H * W, num_anchors, 4)).to(dtype=dtype, device=device)
-    # [B, H*W, num_anchors, 1]
-    box_mask = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
-    # [B, H*W, num_anchors, 1]
-    box_scale = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
+    box_target = torch.zeros((B, num_anchors, H * W, 4)).to(dtype=dtype, device=device)
+    box_mask = torch.zeros((B, num_anchors, H * W, 1)).to(dtype=dtype, device=device)
+    box_scale = torch.zeros((B, num_anchors, H * W, 1)).to(dtype=dtype, device=device)
 
-    # [B, H*W, num_anchors, num_classes]
-    class_target = torch.zeros((B, H * W, num_anchors, num_classes)).to(dtype=dtype, device=device)
-    # [B, H*W, num_anchors, 1]
-    # class_target = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
-    # [B, H*W, num_anchors, 1]
-    class_mask = torch.zeros((B, H * W, num_anchors, 1)).to(dtype=dtype, device=device)
+    class_target = torch.zeros((B, num_anchors, H * W, num_classes)).to(dtype=dtype, device=device)
+    class_mask = torch.zeros((B, num_anchors, H * W, 1)).to(dtype=dtype, device=device)
 
     return iou_target, iou_mask, box_target, box_mask, box_scale, class_target, class_mask
 
@@ -100,7 +91,7 @@ class YOLOv3Loss(nn.Module):
         num_ref_anchors = len(ref_anchors)
 
         B, C, H, W = outputs.shape[:4]
-        outputs = outputs.reshape(B, self.num_anchors, 5 + self.num_classes, H, W).permute(0, 1, 3, 4, 2)
+        outputs = outputs.reshape(B, num_anchors, 5 + self.num_classes, H, W).permute(0, 1, 3, 4, 2)
 
         # grid coordinate
         x_shift = torch.broadcast_to(torch.arange(W).reshape(1, 1, W),
@@ -290,7 +281,7 @@ class YOLOv3Loss(nn.Module):
         assert C == num_anchors * n_ch
 
         # [B, C, H, W] -> [B, num_anchors, 5+num_classes, H, W] -> [B, num_anchors, H, W, 5+num_classes]
-        outputs = outputs.reshape(B, self.num_anchors, 5 + self.num_classes, H, W).permute(0, 1, 3, 4, 2)
+        outputs = outputs.reshape(B, num_anchors, 5 + self.num_classes, H, W).permute(0, 1, 3, 4, 2)
 
         # [B, num_anchors, H, W,  5+num_classes] -> [B, num_anchors*H*W, 5+num_classes]
         outputs = outputs.reshape(B, -1, n_ch)

@@ -13,8 +13,7 @@ import torch
 from torch import nn
 
 from darknet.darknet import ConvBNAct, ResBlock, Darknet53, FastDarknet53
-# from .yololayer import YOLOLayer
-from .yololayer_v2 import YOLOLayer
+from .yololayer import YOLOLayer
 
 from yolo.util import logging
 
