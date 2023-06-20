@@ -1,6 +1,10 @@
 
 # TRAIN
 
+The yolov5 training framework provides the definition of yolov3 and training recipes
+
+* [ultralytics/yolov5](https://github.com/ultralytics/yolov5)
+
 ## 100Epochs Training
 
 ### YOLOv3-tiny
