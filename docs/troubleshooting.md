@@ -14,3 +14,16 @@ Fix:
     RuntimeError: cuDNN error: CUDNN_STATUS_NOT_SUPPORTED. This error may appear if you passed in a non-contiguous input #32564
     https://github.com/pytorch/pytorch/issues/32564#issuecomment-633739690
 ```
+
+```text
+NotImplementedError:                                                                                                                                                                                                                                                              
+amp does not work out-of-the-box with `F.binary_cross_entropy` or `torch.nn.BCELoss.` It requires that the output of the previous function be already a FloatTensor.                                                                                                              
+                                                                                                                                                                                                                                                                                  
+Most models have a Sigmoid right before BCELoss. In that case, you can use                                                                                                                                                                                                        
+    torch.nn.BCEWithLogitsLoss                                                                                                                                                                                                                                                    
+to combine Sigmoid+BCELoss into a single layer that is compatible with amp.                                                                                                                                                                                                       
+Another option is to add                                                                                                                                                                                                                                                          
+    amp.register_float_function(torch, 'sigmoid')                                                                                                                                                                                                                                 
+before calling `amp.init()`.                                                                                                                                                                                                                                                      
+If you _really_ know what you are doing, you can disable this warning by passing allow_banned=True to `amp.init()`.
+```
