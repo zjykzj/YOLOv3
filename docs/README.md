@@ -7,7 +7,7 @@
 2. Add pretrained backbone or not: [pretrained](./pretrained.md)
 3. Using the yolov5 training framework: [yolov5](./yolov5.md)
 4. Training problem: [trouble shooting](./troubleshooting.md)
-5. YOLOv3Loss or YOLOv3LossV2: [which loss](./which_loss.md)
+5. YOLOv3Loss vs. YOLOv3LossV2: [which loss](./which_loss.md)
 
 ## Train results
 
@@ -36,13 +36,13 @@
     <td class="tg-7btt">COCO AP[IoU=0.50:0.95], inference</td>
     <td class="tg-c3ow">0.310</td>
     <td class="tg-c3ow">0.311</td>
-    <td class="tg-c3ow">0.315</td>
+    <td class="tg-c3ow">0.304</td>
   </tr>
   <tr>
     <td class="tg-7btt">COCO AP[IoU=0.50], inference</td>
     <td class="tg-c3ow">0.553</td>
     <td class="tg-c3ow">0.558</td>
-    <td class="tg-c3ow">0.543</td>
+    <td class="tg-c3ow">0.529</td>
   </tr>
   <tr>
     <td class="tg-7btt">conf_thre</td>

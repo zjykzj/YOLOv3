@@ -82,7 +82,7 @@ before calling `amp.init()`.
 If you _really_ know what you are doing, you can disable this warning by passing allow_banned=True to `amp.init()`.
 ```
 
-I tried switching to `binary_cross_entropy_with_logits` implementation, but the calculated loss will be very outrageous, which is very different from the loss calculation of BCELoss. It is possible that YOLOv3Loss is also related to this. If I switch to the implementation of BCELoss and do not perform mixed precision training, its effect will be better
+I tried switching to `binary_cross_entropy_with_logits` implementation, but the calculated loss will be very outrageous, which is very different from the loss calculation of BCELoss. It is possible that YOLOv3Loss is also related to this. If I switch to the implementation of BCELoss and do not perform mixed precision training, its effect will be better.
 
 
     
