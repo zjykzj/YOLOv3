@@ -1,7 +1,14 @@
 
 # YOLOv3
 
-## All Results
+## Docs
+
+1. Add weight decay to Bias/Norm or not: [no_bias_norm](./no_bias_norm.md)
+2. Add pretrained backbone or not: [pretrained](./pretrained.md)
+3. Using the yolov5 training framework: [yolov5](./yolov5.md)
+4. Training problem: [trouble shooting](./troubleshooting.md)
+
+## Train results
 
 * Train 120 rounds with [yolov3_default.cfg](./config/yolov3_default.cfg) and verify with COCO val2017. Compare with other results (training 300 rounds) as follows:
 
@@ -57,7 +64,7 @@
 </tbody>
 </table>
 
-## Train using yolov5
+## Training using yolov5
 
 [ultralytics/yolov5](https://github.com/ultralytics/yolov5) provides a very nice training framework and training recipes for different configurations of YOLOv3. The results of training are as follows
 
