@@ -138,13 +138,13 @@ docker run --gpus all -it --rm -v </path/to/YOLOv3>:/app/YOLOv3 -v </path/to/COC
 * One GPU
 
 ```shell
-CUDA_VISIBLE_DEVICES=0 python main_amp.py -c configs/yolov3_voc.cfg --opt-level=O1 ../datasets/voc
+CUDA_VISIBLE_DEVICES=0 python main_amp.py -c configs/yolov3_voc.cfg --opt-level=O0 ../datasets/voc
 ```
 
 * Multi-GPUs
 
 ```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "36321" main_amp.py -c configs/yolov3_coco.cfg --opt-level=O1 ../datasets/coco
+CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "36321" main_amp.py -c configs/yolov3_coco.cfg --opt-level=O0 ../datasets/coco
 ```
 
 ### Eval
