@@ -7,6 +7,7 @@
 2. Add pretrained backbone or not: [pretrained](./pretrained.md)
 3. Using the yolov5 training framework: [yolov5](./yolov5.md)
 4. Training problem: [trouble shooting](./troubleshooting.md)
+5. YOLOv3Loss or YOLOv3LossV2: [which loss](./which_loss.md)
 
 ## Train results
 
