@@ -151,14 +151,17 @@ def main():
     # model = Darknet53()
     if args.arch == 'darknet53':
         print("=> creating model Darknet53")
-        from .darknet import Darknet53
+        from darknet import Darknet53
         model = Darknet53(num_classes=1000)
     elif args.arch == 'fastdarknet53':
         print("=> creating model FastDarknet53")
-        from .darknet import FastDarknet53
+        from darknet import FastDarknet53
         model = FastDarknet53(num_classes=1000)
     else:
         raise ValueError(f"{args.arch} doesn't supports")
+
+    if args.local_rank == 0:
+        print(model)
 
     if args.sync_bn:
         import apex
