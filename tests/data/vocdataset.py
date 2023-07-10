@@ -7,13 +7,10 @@
 @description: 
 """
 
-import random
 import time
-
-from tqdm import tqdm
+import random
 
 import torch
-from torch.utils.data import DataLoader
 
 from yolo.data.dataset.vocdataset import VOCDataset
 from yolo.data.transform import Transform
@@ -69,12 +66,37 @@ def test_train(cfg_file, name):
     cfg = load_cfg(cfg_file)
     print(f"load cfg: {cfg_file}")
 
-    train_dataset = VOCDataset(root, name, train=True, transform=Transform(cfg, is_train=True))
+    train_dataset = VOCDataset(root, name, train=True, transform=Transform(cfg, is_train=True),
+                               target_size=cfg['TRAIN']['IMGSIZE'])
     print("Total len:", len(train_dataset))
 
     end = time.time()
     for i in range(len(train_dataset)):
         image, target = train_dataset.__getitem__(i)
+
+        # import matplotlib.pylab as plt
+        # from yolo.util.plots import visualize
+        #
+        # h, w = image.shape[:2]
+        # print("after:", image.shape)
+        # bboxes = []
+        # category_ids = []
+        #
+        # # [num_max_det, 5] -> [num_max_det]
+        # num_labels = (target.sum(dim=1) > 0).sum()
+        # if num_labels > 0:
+        #     for label in target[:num_labels].tolist():
+        #         x_c, y_c, box_w, box_h = label[1:]
+        #         x_min = (x_c - box_w / 2) * w
+        #         y_min = (y_c - box_h / 2) * h
+        #         box_w = box_w * w
+        #         box_h = box_h * h
+        #         bboxes.append([x_min, y_min, box_w, box_h])
+        #         category_ids.append(int(label[0]))
+        #
+        # visualize(image, bboxes, category_ids, VOCDataset.classes)
+        # plt.show()
+
         image = torch.from_numpy(image)
         images = image.unsqueeze(0)
         targets = target.unsqueeze(0)
@@ -83,43 +105,46 @@ def test_train(cfg_file, name):
         print(f"[{i}/{len(train_dataset)}] {images.shape} {targets.shape}")
     print(f"Avg one time: {(time.time() - end) / len(train_dataset)}")
 
-    # for num_workers in [16, 8, 4]:
-    #     print(f"Train Dataloader, num_workers: {num_workers}")
-    #     train_dataloader = DataLoader(train_dataset, batch_size=16, num_workers=num_workers,
-    #                                   shuffle=False, sampler=None, pin_memory=True)
-    #     end = time.time()
-    #     for i, (images, targets) in enumerate(tqdm(train_dataloader)):
-    #         assert_data(images, targets)
-    #         # print(f"[{i}/{len(train_dataloader)}] {images.shape} {targets.shape}")
-    #     print(f"Avg one time: {(time.time() - end) / len(train_dataset)}")
-
 
 def test_val(cfg_file, name):
     cfg = load_cfg(cfg_file)
     print(f"load cfg: {cfg_file}")
 
-    # test_dataset = VOCDataset(root, name, S=7, B=2, train=False, transform=Transform(is_train=False))
-    # image, target = test_dataset.__getitem__(300)
-    # print(image.shape, target.shape)
-
-    val_dataset = VOCDataset(root, name, train=False, transform=Transform(cfg, is_train=False))
+    val_dataset = VOCDataset(root, name, train=False, transform=Transform(cfg, is_train=False),
+                             target_size=cfg['TEST']['IMGSIZE'])
     print("Total len:", len(val_dataset))
-
-    # i = 170
-    # image, target = val_dataset.__getitem__(i)
-    # print(i, image.shape, target['target'].shape, len(target['img_info']), target['image_name'])
-
-    # for i in [31, 62, 100, 166, 169, 170, 633]:
-    #     image, target = val_dataset.__getitem__(i)
-    #     print(i, image.shape, target['target'].shape, len(target['img_info']))
 
     end = time.time()
     for i in range(len(val_dataset)):
         image, target = val_dataset.__getitem__(i)
-        image = torch.from_numpy(image)
         assert isinstance(target, Target)
-        print(i, image.shape, target.target.shape, len(target.img_info), target.img_id)
 
+        # import matplotlib.pylab as plt
+        # from yolo.util.plots import visualize
+        #
+        # h, w = image.shape[:2]
+        # print("after:", image.shape)
+        # bboxes = []
+        # category_ids = []
+        #
+        # labels = target.target.clone()
+        # # [num_max_det, 5] -> [num_max_det]
+        # num_labels = (labels.sum(dim=1) > 0).sum()
+        # if num_labels > 0:
+        #     for label in labels[:num_labels].tolist():
+        #         x_c, y_c, box_w, box_h = label[1:]
+        #         x_min = (x_c - box_w / 2) * w
+        #         y_min = (y_c - box_h / 2) * h
+        #         box_w = box_w * w
+        #         box_h = box_h * h
+        #         bboxes.append([x_min, y_min, box_w, box_h])
+        #         category_ids.append(int(label[0]))
+        #
+        # visualize(image, bboxes, category_ids, VOCDataset.classes)
+        # plt.show()
+
+        image = torch.from_numpy(image)
+        print(i, image.shape, target.target.shape, len(target.img_info), target.img_id)
         images = image.unsqueeze(0)
         targets = target.target.unsqueeze(0)
         assert_data(images, targets)

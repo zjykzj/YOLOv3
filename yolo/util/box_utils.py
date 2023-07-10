@@ -9,15 +9,49 @@
 
 import copy
 
-from numpy import ndarray
+import numpy as np
 
 import torch
 from torch import Tensor
 
 
-def xywh2xyxy(boxes: Tensor, is_center: bool = False):
+def clip_boxes(boxes, shape):
+    # Clip boxes (xyxy) to image shape (height, width)
+    if isinstance(boxes, torch.Tensor):  # faster individually
+        boxes[:, 0].clamp_(0, shape[1])  # x1
+        boxes[:, 1].clamp_(0, shape[0])  # y1
+        boxes[:, 2].clamp_(0, shape[1])  # x2
+        boxes[:, 3].clamp_(0, shape[0])  # y2
+    else:  # np.array (faster grouped)
+        boxes[:, [0, 2]] = boxes[:, [0, 2]].clip(0, shape[1])  # x1, x2
+        boxes[:, [1, 3]] = boxes[:, [1, 3]].clip(0, shape[0])  # y1, y2
+
+
+def xywhn2xyxy(x, w=640, h=640, padw=0, padh=0):
+    # Convert nx4 boxes from [x, y, w, h] normalized to [x1, y1, x2, y2] where xy1=top-left, xy2=bottom-right
+    y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
+    y[:, 0] = w * (x[:, 0] - x[:, 2] / 2) + padw  # top left x
+    y[:, 1] = h * (x[:, 1] - x[:, 3] / 2) + padh  # top left y
+    y[:, 2] = w * (x[:, 0] + x[:, 2] / 2) + padw  # bottom right x
+    y[:, 3] = h * (x[:, 1] + x[:, 3] / 2) + padh  # bottom right y
+    return y
+
+
+def xyxy2xywhn(x, w=640, h=640, clip=False, eps=0.0):
+    # Convert nx4 boxes from [x1, y1, x2, y2] to [x, y, w, h] normalized where xy1=top-left, xy2=bottom-right
+    if clip:
+        clip_boxes(x, (h - eps, w - eps))  # warning: inplace clip
+    y = x.clone() if isinstance(x, torch.Tensor) else np.copy(x)
+    y[:, 0] = ((x[:, 0] + x[:, 2]) / 2) / w  # x center
+    y[:, 1] = ((x[:, 1] + x[:, 3]) / 2) / h  # y center
+    y[:, 2] = (x[:, 2] - x[:, 0]) / w  # width
+    y[:, 3] = (x[:, 3] - x[:, 1]) / h  # height
+    return y
+
+
+def xywh2xyxy(boxes, is_center=False):
     assert len(boxes.shape) >= 2 and boxes.shape[-1] == 4
-    boxes_xxyy = boxes.new_zeros(boxes.shape)
+    boxes_xxyy = boxes.new_zeros(boxes.shape) if isinstance(boxes, Tensor) else copy.deepcopy(boxes)
     if is_center:
         # [x_c, y_c, w, h] -> [x1, y1, x2, y2]
         boxes_xxyy[..., 0] = (boxes[..., 0] - boxes[..., 2] / 2)
@@ -33,7 +67,7 @@ def xywh2xyxy(boxes: Tensor, is_center: bool = False):
 
 def xyxy2xywh(boxes, is_center=False):
     assert len(boxes.shape) == 2 and boxes.shape[1] == 4
-    boxes_xywh = copy.deepcopy(boxes)
+    boxes_xywh = boxes.new_zeros(boxes.shape) if isinstance(boxes, Tensor) else copy.deepcopy(boxes)
     if is_center:
         # [x1, y1, x2, y2] -> [x_c, y_c, w, h]
         boxes_xywh[:, 0] = (boxes[:, 0] + boxes[:, 2]) / 2
@@ -125,20 +159,17 @@ def bboxes_iou(bboxes_a: Tensor, bboxes_b: Tensor, xyxy=True) -> Tensor:
     return area_i / (area_a[:, None] + area_b - area_i)
 
 
-def label2yolobox(labels: ndarray):
+def label2yolobox(labels):
     """
     Transform coco labels to yolo box labels
     """
-    assert isinstance(labels, ndarray)
-    assert len(labels.shape) == 2 and labels.shape[1] == 4
-
     # x1/y1/w/h -> x1/y1/x2/y2
     x1 = labels[..., 0]
     y1 = labels[..., 1]
     x2 = (labels[..., 0] + labels[..., 2])
     y2 = (labels[..., 1] + labels[..., 3])
 
-    # x1/y1/w/h -> xc/yc/w/h
+    # x1/y1/x2/y2 -> xc/yc/w/h
     labels[..., 0] = ((x1 + x2) / 2)
     labels[..., 1] = ((y1 + y2) / 2)
     return labels

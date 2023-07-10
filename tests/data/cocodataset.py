@@ -10,12 +10,8 @@
 import random
 import time
 
-from tqdm import tqdm
-
 import torch
-from torch.utils.data import DataLoader
 
-from yolo.data.dataset import KEY_TARGET, KEY_IMAGE_INFO, KEY_IMAGE_ID
 from yolo.data.dataset.cocodataset import COCODataset, get_coco_label_names
 from yolo.data.transform import Transform
 from yolo.data.target import Target
@@ -71,7 +67,8 @@ def test_train(cfg_file):
     print(f"load cfg: {cfg_file}")
 
     transform = Transform(cfg, is_train=True)
-    train_dataset = COCODataset(root, name='train2017', train=True, transform=transform, target_size=416)
+    train_dataset = COCODataset(root, name='train2017', train=True, transform=transform,
+                                target_size=cfg['TRAIN']['IMGSIZE'])
     print("Total len:", len(train_dataset))
 
     print("Train Dataset")
@@ -86,37 +83,16 @@ def test_train(cfg_file):
         print(f"[{i}/{len(train_dataset)}] {images.shape} {targets.shape}")
     print(f"Avg one time: {(time.time() - end) / len(train_dataset)}")
 
-    # for num_workers in [16, 8, 4]:
-    #     print(f"Train Dataloader, num_workers: {num_workers}")
-    #     train_dataloader = DataLoader(train_dataset, batch_size=16, num_workers=num_workers,
-    #                                   shuffle=False, sampler=None, pin_memory=True)
-    #     end = time.time()
-    #     for i, (images, targets) in enumerate(tqdm(train_dataloader)):
-    #         assert_data(images, targets)
-    #         # print(f"[{i}/{len(train_dataloader)}] {images.shape} {targets.shape}")
-    #     print(f"Avg one time: {(time.time() - end) / len(train_dataset)}")
-
 
 def test_val(cfg_file):
     cfg = load_cfg(cfg_file)
     print(f"load cfg: {cfg_file}")
 
-    # test_dataset = VOCDataset(root, name, S=7, B=2, train=False, transform=Transform(is_train=False))
-    # image, target = test_dataset.__getitem__(300)
-    # print(image.shape, target.shape)
-
     root = '../datasets/coco'
     transform = Transform(cfg, is_train=False)
-    val_dataset = COCODataset(root, name='val2017', train=False, transform=transform, target_size=416)
+    val_dataset = COCODataset(root, name='val2017', train=False, transform=transform,
+                              target_size=cfg['TEST']['IMGSIZE'])
     print("Total len:", len(val_dataset))
-
-    # i = 170
-    # image, target = val_dataset.__getitem__(i)
-    # print(i, image.shape, target['target'].shape, len(target['img_info']), target['image_name'])
-
-    # for i in [31, 62, 100, 166, 169, 170, 633]:
-    #     image, target = val_dataset.__getitem__(i)
-    #     print(i, image.shape, target['target'].shape, len(target['img_info']))
 
     end = time.time()
     for i in range(len(val_dataset)):
