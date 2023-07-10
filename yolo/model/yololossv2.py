@@ -114,116 +114,7 @@ class YOLOv3LossV2(nn.Module):
         self.l2_loss = nn.MSELoss(reduction="sum").to(device)
         self.bce_loss = nn.BCELoss(reduction="sum").to(device)
 
-    def build_target(self, pred: Tensor, labels: Tensor):
-        B, _, H, W, _ = pred.shape
-        dtype = pred.dtype
-
-        labels = labels.to(dtype)
-
-        n_ch = 5 + self.n_classes
-
-        # target assignment
-        # 假定所有预测坐标和预测类别概率均不参与损失计算
-        tgt_mask = torch.zeros(B, self.num_anchors, H, W, 4 + self.n_classes, dtype=dtype).to(self.device)
-        # 假定所有预测锚点框均参与损失计算
-        obj_mask = torch.ones(B, self.num_anchors, H, W, dtype=dtype).to(self.device)
-        # 预测坐标的加权因子在计算中动态设置
-        tgt_scale = torch.zeros(B, self.num_anchors, H, W, 2, dtype=dtype).to(self.device)
-
-        # 创建损失计算的target，通过掩码控制参与计算的预测位置
-        target = torch.zeros(B, self.num_anchors, H, W, n_ch, dtype=dtype).to(self.device)
-
-        truth_x_all = labels[:, :, 1] * W
-        truth_y_all = labels[:, :, 2] * H
-        truth_w_all = labels[:, :, 3] * W
-        truth_h_all = labels[:, :, 4] * H
-        truth_i_all = truth_x_all.to(torch.int16)
-        truth_j_all = truth_y_all.to(torch.int16)
-
-        # 首先判断是否bbox的xywh有大于0，然后求和计算每幅图像拥有的目标个数
-        num_labels = (labels.sum(dim=2) > 0).sum(dim=1)
-
-        for bi in range(B):
-            # 获取该幅图像定义的真值标签框个数
-            n = int(num_labels[bi])
-            if n == 0:
-                # 如果为0，说明该图像没有符合条件的真值标签框，那么仅计算目标置信度预测损失
-                continue
-
-            # 去除空的边界框，获取真正的标注框坐标
-            truth_box = torch.zeros((n, 4), dtype=dtype).to(self.device)
-            # 重新赋值，在数据类定义中，前n个就是真正的真值边界框
-            truth_box[:n, 2] = truth_w_all[bi, :n]
-            truth_box[:n, 3] = truth_h_all[bi, :n]
-            # 真值标签框的x_center，也就是第i个网格
-            truth_i = truth_i_all[bi, :n]
-            # 真值标签框的y_center，也就是第j个网格
-            truth_j = truth_j_all[bi, :n]
-
-            # calculate iou between truth and reference anchors
-            anchor_ious_all = bboxes_iou(truth_box, self.ref_anchors, xyxy=True)
-            assert isinstance(anchor_ious_all, torch.Tensor)
-            # 找出和真值边界框之间的IoU最大的锚点框的下标
-            # [n, 9] -> [n]
-            best_n_all = torch.argmax(anchor_ious_all, dim=1)
-            # [n] -> [n]
-            best_n = best_n_all % 3
-            assert isinstance(best_n, torch.Tensor)
-            # (best_n_all == self.anch_mask[0]): [n] == 第一个锚点框下标
-            # (beat_n_all == self.anch_mask[1]): [n] == 第二个锚点框下标
-            # (beat_n_all == self.anch_mask[1]): [n] == 第三个锚点框下标
-            # [n] | [n] | [n] = [n]
-            # 计算每个真值标注框最匹配的锚点框作用在当前层特征数据的掩码
-            best_n_mask = ((best_n_all == self.anch_mask[0]) | (
-                    best_n_all == self.anch_mask[1]) | (best_n_all == self.anch_mask[2]))
-            assert isinstance(best_n_mask, torch.Tensor)
-
-            # 赋值x_center和y_center
-            truth_box[:n, 0] = truth_x_all[bi, :n]
-            truth_box[:n, 1] = truth_y_all[bi, :n]
-
-            # 计算预测框和真值边界框的IoU
-            # ([num_anchors*F_H*F_W, 4], [n, 4]) -> [B*num_anchors*F_H*F_W, n]
-            # 预测框坐标：xc/yc是相对于指定网格的比率计算，w/h是相对于特征图空间尺寸的对数运算
-            # 真值标注框：xc/yc是相对于输入模型图像的比率计算，w/h是相对于输入模型图像的比率计算，也就是说，参照物是特征图空间尺寸
-            pred_ious = bboxes_iou(pred[bi].reshape(-1, 4), truth_box, xyxy=False)
-            assert isinstance(pred_ious, torch.Tensor)
-
-            pred_best_iou = torch.max(pred_ious, dim=1)[0]
-            # 计算掩码，IoU比率要大于忽略阈值。也就是说，如果IoU大于忽略阈值（也就是说预测框坐标与真值标注框坐标非常接近），那么该预测框不参与损失计算
-            pred_best_iou = (pred_best_iou > self.ignore_thresh)
-            # 改变形状，[num_anchors*F_H*F_W] -> [num_anchors, F_H, F_W]
-            pred_best_iou = pred_best_iou.view(pred[bi].shape[:3])
-            # set mask to zero (ignore) if pred matches truth
-            obj_mask[bi] = ~pred_best_iou
-
-            if sum(best_n_mask) == 0:
-                continue
-
-            for ti in range(best_n.shape[0]):
-                if best_n_mask[ti] == 1:
-                    a = best_n[ti]
-                    i, j = truth_i[ti], truth_j[ti]
-
-                    obj_mask[bi, a, j, i] = 1
-                    tgt_mask[bi, a, j, i, :] = 1
-                    tgt_scale[bi, a, j, i, :] = torch.sqrt(2 - truth_w_all[bi, ti] * truth_h_all[bi, ti] / H / W)
-
-                    target[bi, a, j, i, 0] = truth_x_all[bi, ti] - truth_x_all[bi, ti].to(torch.int16).to(dtype)
-                    target[bi, a, j, i, 1] = truth_y_all[bi, ti] - truth_y_all[bi, ti].to(torch.int16).to(dtype)
-
-                    target[bi, a, j, i, 2] = torch.log(
-                        truth_w_all[bi, ti] / torch.Tensor(self.masked_anchors)[best_n[ti], 0] + 1e-16)
-                    target[bi, a, j, i, 3] = torch.log(
-                        truth_h_all[bi, ti] / torch.Tensor(self.masked_anchors)[best_n[ti], 1] + 1e-16)
-
-                    target[bi, a, j, i, 4] = 1
-
-                    target[bi, a, j, i, 5 + labels[bi, ti, 0].to(torch.int16)] = 1
-
-        return target, obj_mask, tgt_mask, tgt_scale
-
-    def make_pred(self, outputs: Tensor):
+    def _make_pred(self, outputs: Tensor):
         B, C, H, W = outputs.shape[:4]
         n_ch = 5 + self.n_classes
         assert C == (self.num_anchors * n_ch)
@@ -246,71 +137,156 @@ class YOLOv3LossV2(nn.Module):
                                        (B, self.num_anchors, H, W)).to(dtype=dtype, device=device)
         # Reshape
         outputs = outputs.reshape(B, self.num_anchors, n_ch, H, W).permute(0, 1, 3, 4, 2)
+        preds = outputs[..., :4]
 
         # logistic activation
-        # xy + obj_pred + cls_pred
-        outputs[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(outputs[..., np.r_[:2, 4:n_ch]])
+        preds[..., :2] = torch.sigmoid(preds[..., :2])
 
-        pred = outputs.clone()
         # b_x = sigmoid(t_x) + c_x
         # b_y = sigmoid(t_y) + c_y
         # b_w = exp(t_w) * p_w
         # b_h = exp(t_h) * p_h
         #
-        pred[..., 0] += x_shift
-        pred[..., 1] += y_shift
-        pred[..., 2] = torch.exp(pred[..., 2]) * w_anchors
-        pred[..., 3] = torch.exp(pred[..., 3]) * h_anchors
+        preds[..., 0] += x_shift
+        preds[..., 1] += y_shift
+        preds[..., 2] = torch.exp(preds[..., 2]) * w_anchors
+        preds[..., 3] = torch.exp(preds[..., 3]) * h_anchors
 
-        return pred[..., :4], outputs
+        return preds
+
+    def _build_target(self, pred: Tensor, labels: Tensor):
+        B, _, H, W, _ = pred.shape
+        n_ch = 5 + self.n_classes
+
+        # target assignment
+        tgt_mask = torch.zeros(B, self.num_anchors, H, W, 4 + self.n_classes).to(dtype=self.dtype, device=self.device)
+        obj_mask = torch.ones(B, self.num_anchors, H, W).to(dtype=self.dtype, device=self.device)
+        tgt_scale = torch.zeros(B, self.num_anchors, H, W, 2).to(dtype=self.dtype, device=self.device)
+
+        target = torch.zeros(B, self.num_anchors, H, W, n_ch).to(dtype=self.dtype, device=self.device)
+
+        truth_x_all = labels[:, :, 1] * W
+        truth_y_all = labels[:, :, 2] * H
+        truth_w_all = labels[:, :, 3] * W
+        truth_h_all = labels[:, :, 4] * H
+        truth_i_all = truth_x_all.to(dtype=torch.int16)
+        truth_j_all = truth_y_all.to(dtype=torch.int16)
+
+        num_labels = (labels.sum(dim=2) > 0).sum(dim=1)
+
+        for bi in range(B):
+            n = int(num_labels[bi])
+            if n == 0:
+                continue
+
+            truth_box = torch.zeros((n, 4)).to(dtype=self.dtype, device=self.device)
+            truth_box[:n, 2] = truth_w_all[bi, :n]
+            truth_box[:n, 3] = truth_h_all[bi, :n]
+            truth_i = truth_i_all[bi, :n]
+            truth_j = truth_j_all[bi, :n]
+
+            # calculate iou between truth and reference anchors
+            anchor_ious_all = bboxes_iou(truth_box, self.ref_anchors, xyxy=True)
+            assert isinstance(anchor_ious_all, torch.Tensor)
+            # [n, 9] -> [n]
+            best_n_all = torch.argmax(anchor_ious_all, dim=1)
+            # [n] -> [n]
+            best_n = best_n_all % 3
+            assert isinstance(best_n, torch.Tensor)
+            # (best_n_all == self.anch_mask[0]): [n] == 第一个锚点框下标
+            # (beat_n_all == self.anch_mask[1]): [n] == 第二个锚点框下标
+            # (beat_n_all == self.anch_mask[1]): [n] == 第三个锚点框下标
+            # [n] | [n] | [n] = [n]
+            # 计算每个真值标注框最匹配的锚点框作用在当前层特征数据的掩码
+            best_n_mask = ((best_n_all == self.anch_mask[0]) |
+                           (best_n_all == self.anch_mask[1]) | (best_n_all == self.anch_mask[2]))
+            assert isinstance(best_n_mask, torch.Tensor)
+
+            truth_box[:n, 0] = truth_x_all[bi, :n]
+            truth_box[:n, 1] = truth_y_all[bi, :n]
+
+            # 计算预测框和真值边界框的IoU
+            # ([num_anchors*F_H*F_W, 4], [n, 4]) -> [B*num_anchors*F_H*F_W, n]
+            # 预测框坐标：xc/yc是相对于指定网格的比率计算，w/h是相对于特征图空间尺寸的对数运算
+            # 真值标注框：xc/yc是相对于输入模型图像的比率计算，w/h是相对于输入模型图像的比率计算，也就是说，参照物是特征图空间尺寸
+            pred_ious = bboxes_iou(pred[bi].reshape(-1, 4), truth_box, xyxy=False)
+            assert isinstance(pred_ious, torch.Tensor)
+
+            pred_best_iou = torch.max(pred_ious, dim=1)[0]
+            pred_best_iou = (pred_best_iou > self.ignore_thresh)
+            pred_best_iou = pred_best_iou.view(pred[bi].shape[:3])
+            # set mask to zero (ignore) if pred matches truth
+            obj_mask[bi] = ~pred_best_iou
+
+            if sum(best_n_mask) == 0:
+                continue
+
+            for ti in range(best_n.shape[0]):
+                if best_n_mask[ti] == 1:
+                    a = best_n[ti]
+                    i, j = truth_i[ti], truth_j[ti]
+
+                    obj_mask[bi, a, j, i] = 1
+                    tgt_mask[bi, a, j, i, :] = 1
+                    tgt_scale[bi, a, j, i, :] = torch.sqrt(2 - truth_w_all[bi, ti] * truth_h_all[bi, ti] / H / W)
+
+                    target[bi, a, j, i, 0] = truth_x_all[bi, ti] - \
+                                             truth_x_all[bi, ti].to(dtype=torch.int16).to(dtype=self.dtype)
+                    target[bi, a, j, i, 1] = truth_y_all[bi, ti] - \
+                                             truth_y_all[bi, ti].to(dtype=torch.int16).to(dtype=self.dtype)
+
+                    target[bi, a, j, i, 2] = torch.log(
+                        truth_w_all[bi, ti] / torch.Tensor(self.masked_anchors)[best_n[ti], 0] + 1e-16)
+                    target[bi, a, j, i, 3] = torch.log(
+                        truth_h_all[bi, ti] / torch.Tensor(self.masked_anchors)[best_n[ti], 1] + 1e-16)
+
+                    target[bi, a, j, i, 4] = 1
+                    target[bi, a, j, i, 5 + labels[bi, ti, 0].to(dtype=torch.int16)] = 1
+
+        return target, obj_mask, tgt_mask, tgt_scale
 
     def _forward(self, layer_no: int, output: Tensor, labels: Tensor):
         assert isinstance(output, Tensor)
-        # 数值类型以及对应设备
-        dtype = output.dtype
+        self.dtype = output.dtype
 
         self.anch_mask = self.anchor_masks[layer_no]
-        self.stride = self.strides[layer_no]
-
         self.num_anchors = len(self.anch_mask)
+        self.stride = self.strides[layer_no]
 
         # [9, 2] 按比例缩放锚点框长／宽
         self.all_anchors_grid = [(w / self.stride, h / self.stride) for w, h in self.anchors]
         # [3, 2] 采集指定YOLO使用的锚点
         self.masked_anchors = [self.all_anchors_grid[i] for i in self.anch_mask]
         # [9, 4]
-        self.ref_anchors = torch.zeros((len(self.all_anchors_grid), 4), dtype=dtype).to(self.device)
+        self.ref_anchors = torch.zeros((len(self.all_anchors_grid), 4)).to(dtype=self.dtype, device=self.device)
         # 赋值，锚点框宽／高
-        self.ref_anchors[:, 2:] = torch.from_numpy(np.array(self.all_anchors_grid)).to(dtype=dtype,
-                                                                                       device=self.device)
+        self.ref_anchors[:, 2:] = torch.from_numpy(np.array(self.all_anchors_grid)) \
+            .to(dtype=self.dtype, device=self.device)
 
-        pred, output = self.make_pred(output.clone())
-        target, obj_mask, tgt_mask, tgt_scale = self.build_target(pred, labels)
+        # ------------------------------------------------- target
+        pred = self._make_pred(output.clone().detach())
+        target, obj_mask, tgt_mask, tgt_scale = self._build_target(pred, labels)
 
-        # xc/yc/w/h + classes
-        n_ch = output.shape[-1]
+        # ------------------------------------------------- output
+        B, C, H, W = output.shape[:4]
+        n_ch = 5 + self.n_classes
+        output = output.reshape(B, self.num_anchors, n_ch, H, W).permute(0, 1, 3, 4, 2)
+        output[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(output[..., np.r_[:2, 4:n_ch]])
+
+        # ------------------------------------------------- loss
         # loss calculation
-        # obj conf 默认obj_mask会设置为1，也就是假定所有预测框的目标置信度预测都将参与运算，
-        # 然后会设置预测框和真值框之间IoU超过忽略阈值的掩码为0，也就是不参与损失计算（表示他们的预测结果已经符合条件了）
         output[..., 4] *= obj_mask
-        # tgt_mask默认设置为0，所以不符合条件的预测框坐标将不参与损失计算
         output[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
-        # w/h 默认tgt_scale设置为0，所以不符合条件的预测框坐标将不参与损失计算
         output[..., 2:4] *= tgt_scale
 
         target[..., 4] *= obj_mask
         target[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
         target[..., 2:4] *= tgt_scale
 
-        # 加权二值交叉熵损失
         bceloss = nn.BCELoss(weight=tgt_scale * tgt_scale, reduction="sum").to(self.device)  # weighted BCEloss
-        # 计算预测框xc/yc的损失
         loss_xy = bceloss(output[..., :2], target[..., :2])
-        # 计算预测框w/h的损失
         loss_wh = self.l2_loss(output[..., 2:4], target[..., 2:4]) / 2
-        # 计算目标置信度损失
         loss_obj = self.bce_loss(output[..., 4], target[..., 4])
-        # 计算各个类别的分类概率损失
         loss_cls = self.bce_loss(output[..., 5:], target[..., 5:])
 
         loss = loss_xy + loss_wh + loss_obj + loss_cls
@@ -323,7 +299,7 @@ class YOLOv3LossV2(nn.Module):
         loss_list = []
         for layer_no, output in enumerate(outputs):
             output = output.to(self.device)
-            labels = targets.clone().to(self.device)
+            labels = targets.clone().detach().to(self.device)
 
             loss_list.append(self._forward(layer_no, output, labels))
 
