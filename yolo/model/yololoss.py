@@ -12,6 +12,7 @@ In this case, combine the two layers using torch.nn.functional.binary_cross_entr
 or torch.nn.BCEWithLogitsLoss.  binary_cross_entropy_with_logits and BCEWithLogits are
 safe to autocast.
 """
+import logging
 from typing import List
 
 import numpy as np
@@ -271,7 +272,6 @@ class YOLOv3Loss(nn.Module):
         B, C, H, W = output.shape[:4]
         n_ch = 5 + self.n_classes
         output = output.reshape(B, self.num_anchors, n_ch, H, W).permute(0, 1, 3, 4, 2)
-        # output[..., np.r_[:2, 4:n_ch]] = torch.sigmoid(output[..., np.r_[:2, 4:n_ch]])
 
         # ------------------------------------------------- loss
         # loss calculation
@@ -283,14 +283,23 @@ class YOLOv3Loss(nn.Module):
         target[..., np.r_[0:4, 5:n_ch]] *= tgt_mask
         target[..., 2:4] *= tgt_scale
 
-        # bceloss = nn.BCELoss(weight=tgt_scale * tgt_scale, reduction="sum").to(self.device)  # weighted BCEloss
+        mask_cls = tgt_mask[..., 4].reshape(-1)
+
+        tgt_scale = tgt_scale.reshape(-1, 2)[mask_cls > 0]
         bceloss = nn.BCEWithLogitsLoss(weight=tgt_scale * tgt_scale, reduction="sum") \
             .to(device=self.device)  # weighted BCEloss
-        loss_xy = bceloss(output[..., :2], target[..., :2])
-        loss_wh = self.l2_loss(output[..., 2:4], target[..., 2:4]) / 2
+
+        output_xy = output[..., :2].reshape(-1, 2)[mask_cls > 0]
+        target_xy = target[..., :2].reshape(-1, 2)[mask_cls > 0]
+        # logging.info(f"{output_xy.shape} {target_xy.shape} {mask_cls.shape} {tgt_scale.shape}")
+        loss_xy = bceloss(output_xy, target_xy)
+
+        output_wh = output[..., 2:4].reshape(-1, 2)[mask_cls > 0]
+        target_wh = target[..., 2:4].reshape(-1, 2)[mask_cls > 0]
+        loss_wh = self.l2_loss(output_wh, target_wh) / 2
+
         loss_obj = self.bce_loss(output[..., 4], target[..., 4])
 
-        mask_cls = tgt_mask[..., 4].reshape(-1)
         output_cls = output[..., 5:].reshape(-1, self.n_classes)[mask_cls > 0]
         target_cls = target[..., 5:].reshape(-1, self.n_classes)[mask_cls > 0]
         loss_cls = self.bce_loss(output_cls, target_cls)
