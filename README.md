@@ -163,17 +163,29 @@ Input Size：[512x512] ap50_95: = 0.3134 ap50: = 0.5403
 Input Size：[544x544] ap50_95: = 0.3168 ap50: = 0.5459
 Input Size：[576x576] ap50_95: = 0.3163 ap50: = 0.5439
 Input Size：[608x608] ap50_95: = 0.3149 ap50: = 0.5435
-python eval.py -c configs/yolov3_voc.cfg -ckpt outputs/yolov3_voc/model_best.pth.tar --traversal ../datasets/voc
-Input Size：[320x320] ap50_95: = -1.0000 ap50: = 0.7226
-Input Size：[352x352] ap50_95: = -1.0000 ap50: = 0.7312
-Input Size：[384x384] ap50_95: = -1.0000 ap50: = 0.7432
-Input Size：[416x416] ap50_95: = -1.0000 ap50: = 0.7535
-Input Size：[448x448] ap50_95: = -1.0000 ap50: = 0.7573
-Input Size：[480x480] ap50_95: = -1.0000 ap50: = 0.7555
-Input Size：[512x512] ap50_95: = -1.0000 ap50: = 0.7494
-Input Size：[544x544] ap50_95: = -1.0000 ap50: = 0.7578
-Input Size：[576x576] ap50_95: = -1.0000 ap50: = 0.7460
-Input Size：[608x608] ap50_95: = -1.0000 ap50: = 0.7428
+python eval.py -c configs/yolov3_voc.cfg -ckpt outputs/yolov3_voc/model_best.pth.tar ../datasets/voc
+VOC07 metric? Yes
+AP for aeroplane = 0.8442
+AP for bicycle = 0.8575
+AP for bird = 0.7730
+AP for boat = 0.6824
+AP for bottle = 0.6737
+AP for bus = 0.8505
+AP for car = 0.8663
+AP for cat = 0.8667
+AP for chair = 0.6073
+AP for cow = 0.8196
+AP for diningtable = 0.7213
+AP for dog = 0.8433
+AP for horse = 0.8761
+AP for motorbike = 0.8568
+AP for person = 0.8245
+AP for pottedplant = 0.5211
+AP for sheep = 0.8140
+AP for sofa = 0.7385
+AP for train = 0.8304
+AP for tvmonitor = 0.7727
+Mean AP = 0.7820
 ```
 
 ### Demo
