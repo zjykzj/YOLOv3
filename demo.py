@@ -30,6 +30,7 @@ from yolo.data.dataset.cocodataset import COCODataset
 from yolo.data.transform import Transform
 from yolo.util.utils import postprocess
 from yolo.util.box_utils import yolobox2label
+from yolo.util.plots import visualize_cv2
 from yolo.util import logging
 
 logger = logging.get_logger(__name__)
@@ -37,15 +38,15 @@ logger = logging.get_logger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO Demo.')
-    parser.add_argument('cfg', type=str, default='configs/yolov2_voc.cfg', help='Model configuration file.')
+    parser.add_argument('cfg', type=str, default='configs/yolov3_voc.cfg', help='Model configuration file.')
     parser.add_argument('ckpt', type=str, default=None, help='Path to the checkpoint file.')
     parser.add_argument('image', type=str, default=None, help='Path to image file')
 
     parser.add_argument('--outputs', type=str, default='results', help='Path to save image')
     parser.add_argument('--exp', type=str, default='voc', help='Sub folder name')
 
-    parser.add_argument('-c', '--conf-thresh', type=float, default=None, help='Confidence Threshold')
-    parser.add_argument('-n', '--nms-thresh', type=float, default=None, help='NMS Threshold')
+    parser.add_argument('-ct', '--conf-thresh', type=float, default=None, help='Confidence Threshold')
+    parser.add_argument('-nt', '--nms-thresh', type=float, default=None, help='NMS Threshold')
     parser.add_argument('--channels-last', type=bool, default=False)
     args = parser.parse_args()
     logger.info(f"args: {args}")
@@ -75,7 +76,7 @@ def image_preprocess(args: Namespace, cfg: Dict):
         img = cv2.imread(args.image)
         img_raw = img.copy()
 
-        img, _, img_info = transform(0, imgsize, img, np.array([]))
+        img, _, img_info = transform([img], [np.array([])], imgsize)
         # [H, W, C] -> [C, H, W]
         img = torch.from_numpy(img.astype(float)).permute(2, 0, 1).contiguous() / 255
         logger.info(f"img: {img.shape}")
@@ -91,7 +92,7 @@ def image_preprocess(args: Namespace, cfg: Dict):
             img = cv2.imread(img_path)
             img_raw = img.copy()
 
-            img, _, img_info = transform(i, imgsize, img, np.array([]))
+            img, _, img_info = transform([img], [np.array([])], imgsize)
             # [H, W, C] -> [C, H, W]
             img = torch.from_numpy(img.astype(float)).permute(2, 0, 1).contiguous() / 255
             logger.info(f"img: {img.shape}")
@@ -144,7 +145,7 @@ def parse_info(outputs: List, info_img: List or Tuple, classes: List):
         logger.info(f"{int(x1)}, {int(y1)}, {int(x2)}, {int(y2)}, {float(conf)}, {int(cls_pred)}")
         logger.info('\t+ Label: %s, Conf: %.5f' % (label, cls_conf.item()))
         y1, x1, y2, x2 = yolobox2label([y1, x1, y2, x2], info_img)
-        bboxes.append([x1, y1, x2, y2])
+        bboxes.append([x1, y1, x2 - x1, y2 - y1])
         labels.append(label)
         colors.append([random.randint(100, 255), random.randint(100, 255), random.randint(100, 255)])
         confs.append(conf * cls_conf)
@@ -164,31 +165,6 @@ def process(input_data: Tensor, model: Module, device: torch.device,
 
     # [B, num_det, 7]
     return outputs
-
-
-def draw_bbox(img_raw: ndarray,  # 原始图像数据, BGR ndarray
-              bboxes: List,  # 预测边界框
-              confs: List,  # 预测边界框置信度
-              labels: List,  # 预测边界框对象名
-              colors: List):  # 预测边界框绘制颜色
-    im = copy.deepcopy(img_raw)
-
-    for box, conf, label, color in zip(bboxes, confs, labels, colors):
-        assert len(box) == 4, box
-        color = tuple([int(x) for x in color])
-
-        # [x1, y1, x2, y2] -> [x1, y1] [x2, y2]
-        p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
-        cv2.rectangle(im, p1, p2, color, 2)
-
-        text_str = f'{label} {conf:.3f}'
-        w, h = cv2.getTextSize(text_str, 0, fontScale=0.5, thickness=1)[0]
-        p1, p2 = (int(box[0]) + w, int(box[1])), (int(box[0]), int(box[1]) - h)
-        cv2.rectangle(im, p1, p2, color, thickness=-1)
-        org = (int(box[0]), int(box[1]))
-        cv2.putText(im, text_str, org, cv2.FONT_HERSHEY_SIMPLEX, fontScale=.5, color=(0, 0, 0), thickness=1)
-
-    return im
 
 
 def main():
@@ -221,6 +197,7 @@ def main():
     if args.nms_thresh:
         nms_thre = args.nms_thresh
     num_classes = cfg['MODEL']['N_CLASSES']
+    logger.info(f"\nconf_thre: {conf_thre}\nnms_thre: {nms_thre}\nnum_classes: {num_classes}")
 
     data_type = cfg['DATA']['TYPE']
     if 'PASCAL VOC' == data_type:
@@ -243,7 +220,7 @@ def main():
 
         logger.info("Parse INFO")
         bboxes, confs, labels, colors = parse_info(outputs[0], img_info[:6], classes)
-        draw_image = draw_bbox(img_raw, bboxes, confs, labels, colors)
+        draw_image = visualize_cv2(img_raw, bboxes, confs, labels, colors)
 
         img_name = os.path.basename(img_path)
         draw_image_path = os.path.join(save_dir, img_name)
