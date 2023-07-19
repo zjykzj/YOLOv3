@@ -49,13 +49,13 @@
     <td class="tg-fr9f">COCO AP[IoU=0.50:0.95]</td>
     <td class="tg-zkss">0.310</td>
     <td class="tg-9y4h">0.311</td>
-    <td class="tg-9y4h">0.304</td>
+    <td class="tg-9y4h">0.314</td>
   </tr>
   <tr>
     <td class="tg-baqh">COCO AP[IoU=0.50]</td>
     <td class="tg-baqh">0.553</td>
     <td class="tg-baqh">0.558</td>
-    <td class="tg-baqh">0.529</td>
+    <td class="tg-baqh">0.535</td>
   </tr>
 </tbody>
 </table>
@@ -152,17 +152,19 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node
 ### Eval
 
 ```shell
-python eval.py -c configs/yolov3_coco.cfg -ckpt outputs/yolov3_coco/model_best.pth.tar --traversal ../datasets/coco
-Input Size：[320x320] ap50_95: = 0.2710 ap50: = 0.4824
-Input Size：[352x352] ap50_95: = 0.2835 ap50: = 0.4992
-Input Size：[384x384] ap50_95: = 0.2934 ap50: = 0.5131
-Input Size：[416x416] ap50_95: = 0.3039 ap50: = 0.5278
-Input Size：[448x448] ap50_95: = 0.3083 ap50: = 0.5337
-Input Size：[480x480] ap50_95: = 0.3131 ap50: = 0.5386
-Input Size：[512x512] ap50_95: = 0.3134 ap50: = 0.5403
-Input Size：[544x544] ap50_95: = 0.3168 ap50: = 0.5459
-Input Size：[576x576] ap50_95: = 0.3163 ap50: = 0.5439
-Input Size：[608x608] ap50_95: = 0.3149 ap50: = 0.5435
+python eval.py -c configs/yolov3_coco.cfg -ckpt outputs/yolov3_coco/model_best.pth.tar ../datasets/coco
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.314
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.535
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.323
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.133
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.342
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.467
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.272
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.413
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.436
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.252
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.473
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.594
 python eval.py -c configs/yolov3_voc.cfg -ckpt outputs/yolov3_voc/model_best.pth.tar ../datasets/voc
 VOC07 metric? Yes
 AP for aeroplane = 0.8442
