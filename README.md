@@ -49,13 +49,13 @@
     <td class="tg-fr9f">COCO AP[IoU=0.50:0.95]</td>
     <td class="tg-zkss">0.310</td>
     <td class="tg-9y4h">0.311</td>
-    <td class="tg-9y4h">0.314</td>
+    <td class="tg-9y4h">0.314/0.315(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v2.0">v2.0</a>)</td>
   </tr>
   <tr>
     <td class="tg-baqh">COCO AP[IoU=0.50]</td>
     <td class="tg-baqh">0.553</td>
     <td class="tg-baqh">0.558</td>
-    <td class="tg-baqh">0.535</td>
+    <td class="tg-baqh">0.535/0.543(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v2.0">v2.0</a>)</td>
   </tr>
 </tbody>
 </table>
