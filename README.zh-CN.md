@@ -49,13 +49,13 @@
     <td class="tg-fr9f">COCO AP[IoU=0.50:0.95]</td>
     <td class="tg-zkss">0.310</td>
     <td class="tg-9y4h">0.311</td>
-    <td class="tg-9y4h">0.314/0.315(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v2.0">v2.0</a>)</td>
+    <td class="tg-9y4h">0.314(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v4.0">v4.0</a>)/0.315(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v2.0">v2.0</a>)</td>
   </tr>
   <tr>
     <td class="tg-baqh">COCO AP[IoU=0.50]</td>
     <td class="tg-baqh">0.553</td>
     <td class="tg-baqh">0.558</td>
-    <td class="tg-baqh">0.535/0.543(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v2.0">v2.0</a>)</td>
+    <td class="tg-baqh">0.535(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v4.0">v4.0</a>)/0.543(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v2.0">v2.0</a>)</td>
   </tr>
 </tbody>
 </table>
@@ -82,11 +82,12 @@
 
 ## 最近新闻
 
-* ***[2023/06/22][v3.2](https://github.com/zjykzj/YOLOv3/releases/tag/v3.2). Remove Excess Code and Implementation.***
-* ***[2023/06/22][v3.1](https://github.com/zjykzj/YOLOv3/releases/tag/v3.1). Reconstruct DATA Module and Preprocessing Module.***
-* ***[2023/05/24][v3.0](https://github.com/zjykzj/YOLOv3/releases/tag/v3.0). Refer to [zjykzj/YOLOv2](https://github.com/zjykzj/YOLOv2) to reconstruct the entire project and train `Pascal VOC` and `COCO` datasets with `YOLOv2Loss`.***
-* ***[2023/04/16][v2.0](https://github.com/zjykzj/YOLOv3/releases/tag/v2.0). Fixed preprocessing implementation, YOLOv3 network performance close to the original paper implementation.***
-* ***[2023/02/16][v1.0](https://github.com/zjykzj/YOLOv3/releases/tag/v1.0). implementing preliminary YOLOv3 network training and inference implementation.***
+* ***[2023/07/19][v4.0](https://github.com/zjykzj/YOLOv3/releases/tag/v4.0). 添加[ultralytics/yolov5](https://github.com/ultralytics/yolov5)([485da42](https://github.com/ultralytics/yolov5/commit/485da42273839d20ea6bdaf142fd02c1027aba61)) 预处理实现以及支持AMP训练。***
+* ***[2023/06/22][v3.2](https://github.com/zjykzj/YOLOv3/releases/tag/v3.2). 移除多余的代码和实现。***
+* ***[2023/06/22][v3.1](https://github.com/zjykzj/YOLOv3/releases/tag/v3.1). 重构数据模块和预处理模块。***
+* ***[2023/05/24][v3.0](https://github.com/zjykzj/YOLOv3/releases/tag/v3.0). 参考[zjykzj/YOLOv2](https://github.com/zjykzj/YOLOv2)重构整个工程，同时使用`YOLOv2Loss`训练`Pascal VOC`和`COCO`数据集。***
+* ***[2023/04/16][v2.0](https://github.com/zjykzj/YOLOv3/releases/tag/v2.0). 修复预处理实现，现在YOLOv3的训练性能已经接近于原始论文实现。***
+* ***[2023/02/16][v1.0](https://github.com/zjykzj/YOLOv3/releases/tag/v1.0). 初步实现YOLOv3网络训练和推理实现。***
 
 ## 背景
 
