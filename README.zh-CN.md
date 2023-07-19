@@ -1,13 +1,13 @@
 <div align="right">
-  Language:
-    🇺🇸
-  <a title="Chinese" href="./README.zh-CN.md">🇨🇳</a>
+  语言:
+    🇨🇳
+  <a title="英语" href="./README.md">🇺🇸</a>
 </div>
 
 <div align="center"><a title="" href="https://github.com/zjykzj/YOLOv3"><img align="center" src="./imgs/YOLOv3.png" alt=""></a></div>
 
 <p align="center">
-  «YOLOv3» reproduced the paper "YOLOv3: An Incremental Improvement"
+  «YOLOv3» 复现了论文 "YOLOv3: An Incremental Improvement"
 <br>
 <br>
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/standard--readme-OK-green.svg?style=flat-square" alt=""></a>
@@ -15,7 +15,7 @@
   <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt=""></a>
 </p>
 
-* Train using the `COCO train2017` dataset and test using the `COCO val2017` dataset with an input size of `416x416`. give the result as follows (*No version of the COCO dataset used in the paper was found*)
+* 使用`VOC07+12 trainval`数据集进行训练，使用`VOC2007 Test`进行测试，输入大小为`416x416`。测试结果如下：
 
 <!-- <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
@@ -60,27 +60,27 @@
 </tbody>
 </table>
 
-## Table of Contents
+## 内容列表
 
-- [Table of Contents](#table-of-contents)
-- [Latest News](#latest-news)
-- [Background](#background)
-- [Prepare Data](#prepare-data)
+- [内容列表](#内容列表)
+- [最近新闻](#最近新闻)
+- [背景](#背景)
+- [数据准备](#数据准备)
   - [Pascal VOC](#pascal-voc)
   - [COCO](#coco)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-  - [Container](#container)
-- [Usage](#usage)
-  - [Train](#train)
-  - [Eval](#eval)
-  - [Demo](#demo)
-- [Maintainers](#maintainers)
-- [Thanks](#thanks)
-- [Contributing](#contributing)
-- [License](#license)
+- [安装](#安装)
+  - [需求](#需求)
+  - [容器](#容器)
+- [用法](#用法)
+  - [训练](#训练)
+  - [评估](#评估)
+  - [示例](#示例)
+- [主要维护人员](#主要维护人员)
+- [致谢](#致谢)
+- [参与贡献方式](#参与贡献方式)
+- [许可证](#许可证)
 
-## Latest News
+## 最近新闻
 
 * ***[2023/06/22][v3.2](https://github.com/zjykzj/YOLOv3/releases/tag/v3.2). Remove Excess Code and Implementation.***
 * ***[2023/06/22][v3.1](https://github.com/zjykzj/YOLOv3/releases/tag/v3.1). Reconstruct DATA Module and Preprocessing Module.***
@@ -88,68 +88,62 @@
 * ***[2023/04/16][v2.0](https://github.com/zjykzj/YOLOv3/releases/tag/v2.0). Fixed preprocessing implementation, YOLOv3 network performance close to the original paper implementation.***
 * ***[2023/02/16][v1.0](https://github.com/zjykzj/YOLOv3/releases/tag/v1.0). implementing preliminary YOLOv3 network training and inference implementation.***
 
-## Background
+## 背景
 
-The purpose of creating this warehouse is to better understand the YOLO series object detection network. Note: The realization of the project depends heavily on the implementation
-of [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3) and [NVIDIA/apex](https://github.com/NVIDIA/apex)
+创建此仓库的目的是为了更好地理解YOLO系列目标检测网络。注意：该项目的实现参考了[DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3)和[NVIDIA/apex](https://github.com/NVIDIA/apex)
 
-## Prepare Data
+## 数据准备
 
 ### Pascal VOC
 
-Use this script [voc2yolov5.py](https://github.com/zjykzj/vocdev/blob/master/py/voc2yolov5.py)
+使用脚本[voc2yolov5.py](https://github.com/zjykzj/vocdev/blob/master/py/voc2yolov5.py)
 
 ```shell
 python voc2yolov5.py -s /home/zj/data/voc -d /home/zj/data/voc/voc2yolov5-train -l trainval-2007 trainval-2012
 python voc2yolov5.py -s /home/zj/data/voc -d /home/zj/data/voc/voc2yolov5-val -l test-2007
 ```
 
-Then softlink the folder where the dataset is located to the specified location:
+然后将数据集所在的文件夹软链接到指定位置：
 
 ```shell
-ln -s /path/to/voc /path/to/YOLOv3/../datasets/voc
+ln -s /path/to/voc /path/to/YOLOv1/../datasets/voc
 ```
 
 ### COCO
 
-Use this script [get_coco.sh](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh)
+使用脚本[get_coco.sh](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh)
 
+## 安装
 
-## Installation
+### 需求
 
-### Requirements
+查看[NVIDIA/apex](https://github.com/NVIDIA/apex)
 
-Refer to [requirements.txt](./requirements.txt) for installing the training environment
+### 容器
 
-```shell
-pip install -r requirements.txt
-```
-
-### Container
-
-Development environment (Use nvidia docker container)
+开发环境（使用nvidia docker容器）
 
 ```shell
-docker run --gpus all -it --rm -v </path/to/YOLOv3>:/app/YOLOv3 -v </path/to/COCO>:/app/YOLOv3/COCO nvcr.io/nvidia/pytorch:22.08-py3
+docker run --gpus all -it --rm -v </path/to/YOLOv1>:/app/YOLOv1 -v </path/to/voc>:/app/datasets/voc nvcr.io/nvidia/pytorch:22.08-py3
 ```
 
-## Usage
+## 用法
 
-### Train
+### 训练
 
-* One GPU
+* 单个GPU
 
 ```shell
 CUDA_VISIBLE_DEVICES=0 python main_amp.py -c configs/yolov3_coco.cfg --opt-level=O1 ../datasets/coco
 ```
 
-* Multi-GPUs
+* 多个GPUs
 
 ```shell
 CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "36321" main_amp.py -c configs/yolov3_coco.cfg --opt-level=O1 ../datasets/coco
 ```
 
-### Eval
+### 评估
 
 ```shell
 python eval.py -c configs/yolov3_coco.cfg -ckpt outputs/yolov3_coco/model_best.pth.tar ../datasets/coco
@@ -190,7 +184,7 @@ AP for tvmonitor = 0.7727
 Mean AP = 0.7820
 ```
 
-### Demo
+### 示例
 
 ```shell
 python demo.py -c 0.6 configs/yolov3_coco.cfg outputs/yolov3_coco/model_best.pth.tar --exp coco assets/coco/
@@ -204,11 +198,11 @@ python demo.py -c 0.6 configs/yolov3_voc.cfg outputs/yolov3_voc/model_best.pth.t
 
 <p align="left"><img src="results/voc/000237.jpg" height="240"\>  <img src="results/voc/000386.jpg" height="240"\></p>
 
-## Maintainers
+## 主要维护人员
 
 * zhujian - *Initial work* - [zjykzj](https://github.com/zjykzj)
 
-## Thanks
+## 致谢
 
 * [DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3)
 * [NVIDIA/apex](https://github.com/NVIDIA/apex)
@@ -216,18 +210,16 @@ python demo.py -c 0.6 configs/yolov3_voc.cfg outputs/yolov3_voc/model_best.pth.t
 * [ultralytics/yolov5](https://github.com/ultralytics/yolov5)
 * [zjykzj/YOLOv2](https://github.com/zjykzj/YOLOv2)
 
-## Contributing
+## 参与贡献方式
 
-Anyone's participation is welcome! Open an [issue](https://github.com/zjykzj/YOLOv3/issues) or submit PRs.
+欢迎任何人的参与！打开[issue](https://github.com/zjykzj/YOLOv3/issues)或提交合并请求。
 
-Small note:
+注意:
 
-* Git submission specifications should be complied
-  with [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0-beta.4/)
-* If versioned, please conform to the [Semantic Versioning 2.0.0](https://semver.org) specification
-* If editing the README, please conform to the [standard-readme](https://github.com/RichardLitt/standard-readme)
-  specification.
+* `GIT`提交，请遵守[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0-beta.4/)规范
+* 语义版本化，请遵守[Semantic Versioning 2.0.0](https://semver.org)规范
+* `README`编写，请遵守[standard-readme](https://github.com/RichardLitt/standard-readme)规范
 
-## License
+## 许可证
 
-[Apache License 2.0](LICENSE) © 2022 zjykzj
+[Apache License 2.0](LICENSE) © 2023 zjykzj
