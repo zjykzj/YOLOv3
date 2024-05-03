@@ -80,11 +80,12 @@ class YOLOv3Loss(nn.Module):
 
             bs, _, ny, nx, _ = p[i].shape  # pi(bs,5,20,20,85)
             # pi = p[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
-            # x/y/conf compress to [0,1]
-            xy_conf = torch.sigmoid(p[i][..., np.r_[:2, 4:5]])
+            # x/y compress to [0,1]
+            xy = torch.sigmoid(p[i][..., np.r_[:2]])
             # exp()
             wh = torch.exp(p[i][..., 2:4])
-            probs = p[i][..., 5:]
+            conf = p[i][..., 4]
+            probs = p[i][..., 5:self.no]
 
             box_loss = torch.zeros(1, device=self.device)  # box loss
             obj_iou_loss = torch.zeros(1, device=self.device)  # object loss
@@ -99,7 +100,7 @@ class YOLOv3Loss(nn.Module):
                 box_target = box_target.reshape(-1, 4)[box_mask > 0]
                 box_scale = box_scale.reshape(-1)[box_mask > 0].reshape(-1, 1)
 
-                xy_pred = xy_conf[..., :2].reshape(-1, 2)[box_mask > 0]
+                xy_pred = xy.reshape(-1, 2)[box_mask > 0]
                 xy_loss = F.mse_loss(xy_pred, box_target[..., :2], reduction='none')
 
                 wh_pred = wh.reshape(-1, 2)[box_mask > 0]
@@ -115,13 +116,14 @@ class YOLOv3Loss(nn.Module):
 
             if torch.sum(iou_mask == 2) > 0:
                 obj_iou_target = iou_target.reshape(-1)[iou_mask == 2]
-                obj_iou_pred = xy_conf[..., 2].reshape(-1)[iou_mask == 2]
-                obj_iou_loss = F.mse_loss(obj_iou_pred, obj_iou_target, reduction='sum')
+                obj_iou_pred = conf.reshape(-1)[iou_mask == 2]
+                # obj_iou_loss = F.mse_loss(obj_iou_pred, obj_iou_target, reduction='sum')
+                obj_iou_loss = F.binary_cross_entropy_with_logits(obj_iou_pred, obj_iou_target, reduction='sum')
 
             if torch.sum(iou_mask == 1) > 0:
                 noobj_iou_target = iou_target.reshape(-1)[iou_mask == 1]
-                noobj_iou_pred = xy_conf[..., 2].reshape(-1)[iou_mask == 1]
-                noobj_iou_loss = F.mse_loss(noobj_iou_pred, noobj_iou_target, reduction='sum')
+                noobj_iou_pred = conf.reshape(-1)[iou_mask == 1]
+                noobj_iou_loss = F.mse_loss(torch.sigmoid(noobj_iou_pred), noobj_iou_target, reduction='sum')
 
             # --------------------------------------
             # class loss
