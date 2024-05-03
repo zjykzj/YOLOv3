@@ -136,6 +136,10 @@ class YOLOv2Detect(nn.Module):
 
 
 class YOLOv3Detect(YOLOv2Detect):
+    # YOLOv3 Detect head for detection models
+    stride = None  # strides computed during build
+    dynamic = False  # force grid reconstruction
+    export = False  # export mode
 
     def __init__(self, nc=80, anchors=(), ch=(), inplace=True):
         super().__init__(nc, anchors, ch, inplace)
