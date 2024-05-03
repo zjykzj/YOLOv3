@@ -1,0 +1,32 @@
+# Parameters
+nc: 80  # number of classes
+depth_multiple: 1.0  # model depth multiple
+width_multiple: 1.0  # layer channel multiple
+anchors:
+  - [ 13,15, 25,38, 62,61, 104,142, 282,273 ]  # P5/32 for coco
+
+# YOLOv2 Fast_Darknet19
+backbone:
+  # [from, number, module, args]
+  [ [ -1, 1, Conv, [ 32, 3, 1, 1 ] ], # 0
+    [ -1, 1, Conv, [ 64, 3, 2, 1 ] ],  # 1-P1/2
+    [ -1, 1, Conv, [ 128, 3, 2, 1 ] ],  # 2-P2/4
+    [ -1, 1, Conv, [ 256, 3, 2, 1 ] ],  # 3-P3/8
+    [ -1, 1, Conv, [ 512, 3, 2, 1 ] ],  # 4-P4/16
+    [ -1, 1, Conv, [ 1024, 3, 2, 1 ] ],  # 5-P5/32
+    [ -1, 1, Conv, [ 512, 1, 1 ] ],  # 6
+    [ -1, 1, Conv, [ 1024, 3, 1, 1 ] ],  # 7
+  ]
+
+# YOLOv2 head
+head:
+  [
+    [ 4, 1, Conv, [ 64, 1, 1 ] ],  # 8
+    [ -1, 1, Reorg, [ 2, ] ],  # 9
+
+    [ 7, 2, Conv, [ 1024, 3, 1, 1 ] ],  # 10
+    [ [ -1, -2 ], 1, Concat, [ 1, ] ],  # cat [10, 9]
+
+    [ -1, 1, Conv, [ 1024, 3, 1, 1 ] ],  # 12
+    [ [ -1, ], 1, YOLOv2Detect, [ nc, anchors ] ],  # Detect(12)
+  ]
