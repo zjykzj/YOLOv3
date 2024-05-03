@@ -61,6 +61,7 @@ from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_devi
                                smart_resume, torch_distributed_zero_first)
 
 from models.yolov2v3.yolov2loss import YOLOv2Loss
+from models.yolov2v3.yolov3loss import YOLOv3Loss
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -255,6 +256,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     stopper, stop = EarlyStopping(patience=opt.patience), False
     if opt.yolov2loss:
         compute_loss = YOLOv2Loss(model)
+    elif opt.yolov3loss:
+        compute_loss = YOLOv3Loss(model)
     else:
         compute_loss = ComputeLoss(model)  # init loss class
     callbacks.run('on_train_start')
@@ -478,8 +481,9 @@ def parse_opt(known=False):
     parser.add_argument('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval')
     parser.add_argument('--artifact_alias', type=str, default='latest', help='Version of dataset artifact to use')
 
-    # YOLOv2
+    # YOLOv2/YOLOv3
     parser.add_argument('--yolov2loss', action='store_true', help='Using the YOLOv2 loss function')
+    parser.add_argument('--yolov3loss', action='store_true', help='Using the YOLOv3 loss function')
 
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
