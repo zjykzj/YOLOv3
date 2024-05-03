@@ -163,7 +163,7 @@ class YOLOv3Detect(YOLOv2Detect):
                 #
                 # x/y/conf/probs compress to [0,1]
                 # [bs, 5, 20, 20, 2+1+80]
-                xy_conf_probs = torch.sigmoid(x[i][..., np.r_[:2, 4:]])
+                xy_conf_probs = torch.sigmoid(x[i][..., np.r_[0:2, 4:self.no]])
                 xy_conf_probs[..., 0] += self.grid[i][0]
                 xy_conf_probs[..., 1] += self.grid[i][1]
                 # exp()
