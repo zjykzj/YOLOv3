@@ -47,5 +47,5 @@ head:
     [ -1, 1, Conv, [ 256, 3, 1, 1 ] ], # 24
     [ 19, 1, Conv, [ 512, 3, 1, 1 ] ], # 25
     [ 12, 1, Conv, [ 1024, 1, 1 ] ], # 26
-    [ [ 24, 25, 26 ], 1, YOLOv2Detect, [ nc, anchors ] ],  # Detect(P3, P4, P5)
+    [ [ 24, 25, 26 ], 1, YOLOv3Detect, [ nc, anchors ] ],  # Detect(P3, P4, P5)
   ]

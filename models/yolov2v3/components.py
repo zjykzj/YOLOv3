@@ -15,8 +15,6 @@ import torch.nn as nn
 from models.common import Conv
 
 
-## ---------------------------------------------------------------- YOLOv2 Components
-
 class Reorg(nn.Module):
 
     def __init__(self, stride=2):
@@ -137,7 +135,59 @@ class YOLOv2Detect(nn.Module):
         return torch.stack([x_shift, y_shift]), torch.stack([w_anchors, h_anchors])
 
 
-## ----------------------------------------------------------------
+class YOLOv3Detect(YOLOv2Detect):
+
+    def __init__(self, nc=80, anchors=(), ch=(), inplace=True):
+        super().__init__(nc, anchors, ch, inplace)
+
+    def forward(self, x):
+        z = []  # inference output
+        for i in range(self.nl):
+            x[i] = self.m[i](x[i])  # conv
+            # YOLOv2 use 5 anchors
+            bs, _, ny, nx = x[i].shape  # x(bs,425,20,20) to x(bs,5,20,20,85)
+            x[i] = x[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
+
+            if not self.training:  # inference
+                if self.dynamic or self.grid[i].shape[-2:] != x[i].shape[2:4]:
+                    self.grid[i], self.anchor_grid[i] = self._make_grid(bs, nx, ny, i)
+
+                # b_x = sigmoid(t_x) + c_x
+                # b_y = sigmoid(t_y) + c_y
+                # b_w = p_w * e^t_w
+                # b_h = p_h * e^t_h
+                #
+                # x/y/conf/probs compress to [0,1]
+                # [bs, 5, 20, 20, 2+1+80]
+                xy_conf_probs = torch.sigmoid(x[i][..., np.r_[:2, 4:]])
+                xy_conf_probs[..., 0] += self.grid[i][0]
+                xy_conf_probs[..., 1] += self.grid[i][1]
+                # exp()
+                # [bs, 5, 20, 20, 2]
+                wh = torch.exp(x[i][..., 2:4])
+                wh[..., 0] *= self.anchor_grid[i][0]
+                wh[..., 1] *= self.anchor_grid[i][1]
+
+                # [xcyc, wh, conf, probs]
+                # [bs, 5, 20, 20, 85]
+                y = torch.cat((xy_conf_probs[..., :2], wh, xy_conf_probs[..., 2:]), dim=4)
+                # Scale relative to image width/height
+                y[..., :4] *= self.stride[i]
+
+                z.append(y.view(bs, self.na * ny * nx, self.no))
+
+        # 训练阶段，返回特征层数据（List[Tensor]） [1, 5, 8, 8, 85]
+        # 1: 批量大小
+        # 5: 锚点个数
+        # 8: 特征数据高
+        # 9: 特征数据宽
+        # 85: 预测框坐标（xc/yc/box_w/box_h）+预测框置信度+类别数
+        # 推理阶段，返回特征层数据+推理结果（Tuple(Tensor, Tensor)）
+        #         如果导出，仅返回推理结果（bs, 每个特征层输出的预测锚点个数, 每个锚点输出维度）
+        return x if self.training else (torch.cat(z, 1),) if self.export else (torch.cat(z, 1), x)
+
+    def _make_grid(self, bs, nx=20, ny=20, i=0):
+        return super()._make_grid(bs, nx, ny, i)
 
 
 class ResBlock(nn.Module):
