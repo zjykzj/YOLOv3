@@ -81,7 +81,7 @@ class YOLOv3Loss(nn.Module):
             bs, _, ny, nx, _ = p[i].shape  # pi(bs,5,20,20,85)
             # pi = p[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
             # x/y compress to [0,1]
-            xy = torch.sigmoid(p[i][..., np.r_[:2]])
+            xy = torch.sigmoid(p[i][..., 0:2])
             # exp()
             wh = torch.exp(p[i][..., 2:4])
             conf = p[i][..., 4]
