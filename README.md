@@ -4,7 +4,7 @@
   <a title="Chinese" href="./README.zh-CN.md">🇨🇳</a>
 </div>
 
-<div align="center"><a title="" href="https://github.com/zjykzj/YOLOv3"><img align="center" src="./imgs/YOLOv3.png" alt=""></a></div>
+<div align="center"><a title="" href="https://github.com/zjykzj/YOLOv3"><img align="center" src="assets/logo/imgs/YOLOv3.png" alt=""></a></div>
 
 <p align="center">
   «YOLOv3» reproduced the paper "YOLOv3: An Incremental Improvement"

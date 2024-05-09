@@ -4,7 +4,7 @@
   <a title="英语" href="./README.md">🇺🇸</a>
 </div>
 
-<div align="center"><a title="" href="https://github.com/zjykzj/YOLOv3"><img align="center" src="./imgs/YOLOv3.png" alt=""></a></div>
+<div align="center"><a title="" href="https://github.com/zjykzj/YOLOv3"><img align="center" src="assets/logo/imgs/YOLOv3.png" alt=""></a></div>
 
 <p align="center">
   «YOLOv3» 复现了论文 "YOLOv3: An Incremental Improvement"
@@ -65,16 +65,11 @@
 - [内容列表](#内容列表)
 - [最近新闻](#最近新闻)
 - [背景](#背景)
-- [数据准备](#数据准备)
-  - [Pascal VOC](#pascal-voc)
-  - [COCO](#coco)
 - [安装](#安装)
-  - [需求](#需求)
-  - [容器](#容器)
 - [用法](#用法)
   - [训练](#训练)
   - [评估](#评估)
-  - [示例](#示例)
+  - [预测](#预测)
 - [主要维护人员](#主要维护人员)
 - [致谢](#致谢)
 - [参与贡献方式](#参与贡献方式)
