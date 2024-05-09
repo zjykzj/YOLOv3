@@ -148,11 +148,11 @@ python3 detect.py --weights runs/yolov2_voc.pt --source ./assets/voc2007-test/
 
 <p align="left"><img src="assets/results/voc/000237.jpg" height="240"\>  <img src="assets/results/voc/000386.jpg" height="240"\></p>
 
-<!-- ```shell
-python3 detect.py --weights runs/yolov3_coco.pt --source ./assets/coco/
+```shell
+python3 detect.py --weights runs/yolov3_coco.pt --source ./assets/coco/ --conf-thres 0.7
 ```
 
-<p align="left"><img src="assets/results/coco/bus.jpg" height="240"\>  <img src="assets/results/coco/zidane.jpg" height="240"\></p> -->
+<p align="left"><img src="assets/results/coco/bus.jpg" height="240"\>  <img src="assets/results/coco/zidane.jpg" height="240"\></p>
 
 ## Maintainers
 
