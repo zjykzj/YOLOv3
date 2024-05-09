@@ -77,6 +77,7 @@
 
 ## 最近新闻
 
+* ***[2024/05/09][v5.0](https://github.com/zjykzj/YOLOv3/releases/tag/v5.0). 重构YOLOv3工程，集成yolov5-v7.0，重新实现YOLOv3/YOLOv3-fast以及YOLOv3Loss。***
 * ***[2023/07/19][v4.0](https://github.com/zjykzj/YOLOv3/releases/tag/v4.0). 添加[ultralytics/yolov5](https://github.com/ultralytics/yolov5)([485da42](https://github.com/ultralytics/yolov5/commit/485da42273839d20ea6bdaf142fd02c1027aba61)) 预处理实现以及支持AMP训练。***
 * ***[2023/06/22][v3.2](https://github.com/zjykzj/YOLOv3/releases/tag/v3.2). 移除多余的代码和实现。***
 * ***[2023/06/22][v3.1](https://github.com/zjykzj/YOLOv3/releases/tag/v3.1). 重构数据模块和预处理模块。***
