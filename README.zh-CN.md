@@ -49,13 +49,13 @@
     <td class="tg-fr9f">COCO AP[IoU=0.50:0.95]</td>
     <td class="tg-zkss">0.310</td>
     <td class="tg-9y4h">0.311</td>
-    <td class="tg-9y4h">0.314(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v4.0">v4.0</a>)/0.315(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v2.0">v2.0</a>)</td>
+    <td class="tg-9y4h">0.370</td>
   </tr>
   <tr>
     <td class="tg-baqh">COCO AP[IoU=0.50]</td>
     <td class="tg-baqh">0.553</td>
     <td class="tg-baqh">0.558</td>
-    <td class="tg-baqh">0.535(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v4.0">v4.0</a>)/0.543(<a href="https://github.com/zjykzj/YOLOv3/releases/tag/v2.0">v2.0</a>)</td>
+    <td class="tg-baqh">0.604</td>
   </tr>
 </tbody>
 </table>
@@ -93,111 +93,69 @@
 
 创建此仓库的目的是为了更好地理解YOLO系列目标检测网络。注意：该项目的实现参考了[DeNA/PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3)和[NVIDIA/apex](https://github.com/NVIDIA/apex)
 
-## 数据准备
-
-### Pascal VOC
-
-使用脚本[voc2yolov5.py](https://github.com/zjykzj/vocdev/blob/master/py/voc2yolov5.py)
-
-```shell
-python voc2yolov5.py -s /home/zj/data/voc -d /home/zj/data/voc/voc2yolov5-train -l trainval-2007 trainval-2012
-python voc2yolov5.py -s /home/zj/data/voc -d /home/zj/data/voc/voc2yolov5-val -l test-2007
-```
-
-然后将数据集所在的文件夹软链接到指定位置：
-
-```shell
-ln -s /path/to/voc /path/to/YOLOv1/../datasets/voc
-```
-
-### COCO
-
-使用脚本[get_coco.sh](https://github.com/ultralytics/yolov5/blob/master/data/scripts/get_coco.sh)
+注意：当前本仓库最新的实现完全基于[ultralytics/yolov5 v7.0](https://github.com/ultralytics/yolov5/releases/tag/v7.0)
 
 ## 安装
 
-### 需求
+```shell
+pip3 install -r requirements.txt
+```
 
-查看[NVIDIA/apex](https://github.com/NVIDIA/apex)
-
-### 容器
-
-开发环境（使用nvidia docker容器）
+或者使用Docker Container
 
 ```shell
-docker run --gpus all -it --rm -v </path/to/YOLOv1>:/app/YOLOv1 -v </path/to/voc>:/app/datasets/voc nvcr.io/nvidia/pytorch:22.08-py3
+docker run -it --runtime nvidia --gpus=all --shm-size=16g -v /etc/localtime:/etc/localtime -v $(pwd):/workdir --workdir=/workdir --name yolov2 ultralytics/yolov5:latest
 ```
 
 ## 用法
 
 ### 训练
 
-* 单个GPU
-
 ```shell
-CUDA_VISIBLE_DEVICES=0 python main_amp.py -c configs/yolov3_coco.cfg --opt-level=O1 ../datasets/coco
-```
-
-* 多个GPUs
-
-```shell
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port "36321" main_amp.py -c configs/yolov3_coco.cfg --opt-level=O1 ../datasets/coco
+python3 train.py --data VOC.yaml --weights "" --cfg yolov3_voc.yaml --img 640 --device 0 --yolov3loss
+python3 train.py --data VOC.yaml --weights "" --cfg yolov3-fast_voc.yaml --img 640 --device 0 --yolov3loss
+python3 train.py --data coco.yaml --weights "" --cfg yolov3_coco.yaml --img 640 --device 0 --yolov3loss
+python3 train.py --data coco.yaml --weights "" --cfg yolov3-fast_coco.yaml --img 640 --device 0 --yolov3loss
 ```
 
 ### 评估
 
 ```shell
-python eval.py -c configs/yolov3_coco.cfg -ckpt outputs/yolov3_coco/model_best.pth.tar ../datasets/coco
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.314
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.535
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.323
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.133
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.342
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.467
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.272
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.413
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.436
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.252
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.473
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.594
-python eval.py -c configs/yolov3_voc.cfg -ckpt outputs/yolov3_voc/model_best.pth.tar ../datasets/voc
-VOC07 metric? Yes
-AP for aeroplane = 0.8442
-AP for bicycle = 0.8575
-AP for bird = 0.7730
-AP for boat = 0.6824
-AP for bottle = 0.6737
-AP for bus = 0.8505
-AP for car = 0.8663
-AP for cat = 0.8667
-AP for chair = 0.6073
-AP for cow = 0.8196
-AP for diningtable = 0.7213
-AP for dog = 0.8433
-AP for horse = 0.8761
-AP for motorbike = 0.8568
-AP for person = 0.8245
-AP for pottedplant = 0.5211
-AP for sheep = 0.8140
-AP for sofa = 0.7385
-AP for train = 0.8304
-AP for tvmonitor = 0.7727
-Mean AP = 0.7820
+# python3 val.py --weights runs/yolov3_voc.pt --data VOC.yaml --device 4
+yolov3_voc summary: 198 layers, 67238145 parameters, 0 gradients, 151.5 GFLOPs
+                 Class     Images  Instances          P          R      mAP50   mAP50-95: 100%|██████████| 155/155 01:06
+                   all       4952      12032      0.798      0.761      0.821      0.552
+Speed: 0.1ms pre-process, 6.9ms inference, 1.6ms NMS per image at shape (32, 3, 640, 640)
+# python3 val.py --weights runs/yolov3-fast_voc.pt --data VOC.yaml --device 4
+yolov3-fast_voc summary: 108 layers, 39945921 parameters, 0 gradients, 76.0 GFLOPs
+                 Class     Images  Instances          P          R      mAP50   mAP50-95: 100%|██████████| 155/155 00:55
+                   all       4952      12032      0.727      0.717      0.756      0.444
+Speed: 0.1ms pre-process, 4.2ms inference, 2.1ms NMS per image at shape (32, 3, 640, 640)
+# python3 val.py --weights runs/yolov3_coco.pt --data coco.yaml --device 4
+yolov3_coco summary: 198 layers, 67561245 parameters, 0 gradients, 152.5 GFLOPs
+Speed: 0.1ms pre-process, 6.9ms inference, 3.8ms NMS per image at shape (32, 3, 640, 640)
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.370
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.604
+# python3 val.py --weights runs/yolov3-fast_coco.pt --data coco.yaml --device 4
+yolov3-fast_coco summary: 108 layers, 40269021 parameters, 0 gradients, 77.0 GFLOPs
+Speed: 0.1ms pre-process, 4.3ms inference, 4.5ms NMS per image at shape (32, 3, 640, 640)
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.309
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.547
 ```
 
-### 示例
+### 预测
 
 ```shell
-python demo.py -c 0.6 configs/yolov3_coco.cfg outputs/yolov3_coco/model_best.pth.tar --exp coco assets/coco/
+python3 detect.py --weights runs/yolov2_voc.pt --source ./assets/voc2007-test/
 ```
 
-<p align="left"><img src="results/coco/bus.jpg" height="240"\>  <img src="results/coco/zidane.jpg" height="240"\></p>
+<p align="left"><img src="assets/results/voc/000237.jpg" height="240"\>  <img src="assets/results/voc/000386.jpg" height="240"\></p>
 
-```shell
-python demo.py -c 0.6 configs/yolov3_voc.cfg outputs/yolov3_voc/model_best.pth.tar --exp voc assets/voc2007-test/
+<!-- ```shell
+python3 detect.py --weights runs/yolov3_coco.pt --source ./assets/coco/
 ```
 
-<p align="left"><img src="results/voc/000237.jpg" height="240"\>  <img src="results/voc/000386.jpg" height="240"\></p>
+<p align="left"><img src="assets/results/coco/bus.jpg" height="240"\>  <img src="assets/results/coco/zidane.jpg" height="240"\></p> -->
 
 ## 主要维护人员
 
