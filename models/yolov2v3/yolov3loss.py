@@ -123,7 +123,8 @@ class YOLOv3Loss(nn.Module):
             if torch.sum(iou_mask == 1) > 0:
                 noobj_iou_target = iou_target.reshape(-1)[iou_mask == 1]
                 noobj_iou_pred = conf.reshape(-1)[iou_mask == 1]
-                noobj_iou_loss = F.mse_loss(torch.sigmoid(noobj_iou_pred), noobj_iou_target, reduction='sum')
+                # noobj_iou_loss = F.mse_loss(torch.sigmoid(noobj_iou_pred), noobj_iou_target, reduction='sum')
+                noobj_iou_loss = F.binary_cross_entropy_with_logits(noobj_iou_pred, noobj_iou_target, reduction='sum')
 
             # --------------------------------------
             # class loss
@@ -221,7 +222,7 @@ class YOLOv3Loss(nn.Module):
                         box_scale[bi, argmax_anchor_idx, cell_idx, :] = scale
 
                     # update iou target and iou mask
-                    iou_target[bi, argmax_anchor_idx, cell_idx, :] = 1
+                    iou_target[bi, argmax_anchor_idx, cell_idx, :] = ious[argmax_anchor_idx, cell_idx, ni]
                     iou_mask[bi, argmax_anchor_idx, cell_idx, :] = 2
 
                     # update cls_target, cls_mask
