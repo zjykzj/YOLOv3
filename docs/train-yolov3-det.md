@@ -71,81 +71,81 @@ Speed: 0.1ms pre-process, 4.3ms inference, 1.6ms NMS per image at shape (32, 3, 
 * YOLOv3
 
 ```shell
-# python3 val.py --weights runs/yolov3_coco.pt --data coco.yaml --device 4
+# python3 val.py --weights runs/yolov3_coco.pt --data coco.yaml --device 0
 yolov3_coco summary: 198 layers, 67561245 parameters, 0 gradients, 152.5 GFLOPs
 val: Scanning /workdir/datasets/coco/val2017.cache... 4952 images, 48 backgrounds, 0 corrupt: 100%|██████████| 5000/5000 00:00
                  Class     Images  Instances          P          R      mAP50   mAP50-95:   1%|          | 1/157 00:01WARNING ⚠️ NMS time limit 2.100s exceeded
-                 Class     Images  Instances          P          R      mAP50   mAP50-95:   1%|▏         | 2/157 00:09WARNING ⚠️ NMS time limit 2.100s exceeded
-                 Class     Images  Instances          P          R      mAP50   mAP50-95:   2%|▏         | 3/157 00:15WARNING ⚠️ NMS time limit 2.100s exceeded
-                 Class     Images  Instances          P          R      mAP50   mAP50-95: 100%|██████████| 157/157 01:43
-                   all       5000      36335       0.66      0.572      0.594      0.364
-Speed: 0.1ms pre-process, 6.9ms inference, 3.8ms NMS per image at shape (32, 3, 640, 640)
+                 Class     Images  Instances          P          R      mAP50   mAP50-95:   1%|▏         | 2/157 00:07WARNING ⚠️ NMS time limit 2.100s exceeded
+                 Class     Images  Instances          P          R      mAP50   mAP50-95:   2%|▏         | 3/157 00:11WARNING ⚠️ NMS time limit 2.100s exceeded
+                 Class     Images  Instances          P          R      mAP50   mAP50-95: 100%|██████████| 157/157 01:24
+                   all       5000      36335        0.7      0.568      0.615      0.398
+Speed: 0.1ms pre-process, 6.9ms inference, 2.1ms NMS per image at shape (32, 3, 640, 640)
 
-Evaluating pycocotools mAP... saving runs/val/exp5/yolov3_coco_predictions.json...
+Evaluating pycocotools mAP... saving runs/val/exp2/yolov3_coco_predictions.json...
 loading annotations into memory...
-Done (t=0.45s)
+Done (t=0.46s)
 creating index...
 index created!
 Loading and preparing results...
-DONE (t=8.56s)
+DONE (t=4.84s)
 creating index...
 index created!
 Running per image evaluation...
 Evaluate annotation type *bbox*
-DONE (t=89.04s).
+DONE (t=67.67s).
 Accumulating evaluation results...
-DONE (t=23.05s).
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.370
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.604
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.391
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.220
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.408
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.483
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.308
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.513
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.562
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.398
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.603
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.702
+DONE (t=15.82s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.400
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.620
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.436
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.236
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.440
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.527
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.321
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.524
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.568
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.394
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.611
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.708
 ```
 
 * YOLOv3-Fast
 
 ```shell
-# python3 val.py --weights runs/yolov3-fast_coco.pt --data coco.yaml --device 4
+# python3 val.py --weights runs/yolov3-fast_coco.pt --data coco.yaml --device 0
 yolov3-fast_coco summary: 108 layers, 40269021 parameters, 0 gradients, 77.0 GFLOPs
 val: Scanning /workdir/datasets/coco/val2017.cache... 4952 images, 48 backgrounds, 0 corrupt: 100%|██████████| 5000/5000 00:00
                  Class     Images  Instances          P          R      mAP50   mAP50-95:   1%|          | 1/157 00:01WARNING ⚠️ NMS time limit 2.100s exceeded
-                 Class     Images  Instances          P          R      mAP50   mAP50-95:   1%|▏         | 2/157 00:09WARNING ⚠️ NMS time limit 2.100s exceeded
-                 Class     Images  Instances          P          R      mAP50   mAP50-95:   2%|▏         | 3/157 00:15WARNING ⚠️ NMS time limit 2.100s exceeded
-                 Class     Images  Instances          P          R      mAP50   mAP50-95: 100%|██████████| 157/157 01:35
-                   all       5000      36335      0.619      0.521      0.536      0.303
-Speed: 0.1ms pre-process, 4.3ms inference, 4.5ms NMS per image at shape (32, 3, 640, 640)
+                 Class     Images  Instances          P          R      mAP50   mAP50-95:   1%|▏         | 2/157 00:04WARNING ⚠️ NMS time limit 2.100s exceeded
+                 Class     Images  Instances          P          R      mAP50   mAP50-95:   2%|▏         | 3/157 00:09WARNING ⚠️ NMS time limit 2.100s exceeded
+                 Class     Images  Instances          P          R      mAP50   mAP50-95: 100%|██████████| 157/157 01:09
+                   all       5000      36335      0.641      0.523      0.553      0.327
+Speed: 0.1ms pre-process, 4.4ms inference, 2.2ms NMS per image at shape (32, 3, 640, 640)
 
-Evaluating pycocotools mAP... saving runs/val/exp4/yolov3-fast_coco_predictions.json...
+Evaluating pycocotools mAP... saving runs/val/exp3/yolov3-fast_coco_predictions.json...
 loading annotations into memory...
 Done (t=0.45s)
 creating index...
 index created!
 Loading and preparing results...
-DONE (t=8.93s)
+DONE (t=5.74s)
 creating index...
 index created!
 Running per image evaluation...
 Evaluate annotation type *bbox*
-DONE (t=91.16s).
+DONE (t=72.52s).
 Accumulating evaluation results...
-DONE (t=23.00s).
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.309
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.547
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.310
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.189
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.358
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.390
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.270
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.464
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.515
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.365
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.563
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.632
+DONE (t=18.68s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.329
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.560
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.338
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.209
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.380
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.415
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.280
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.477
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.525
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.375
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.574
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.636
 ```

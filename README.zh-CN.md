@@ -129,16 +129,16 @@ yolov3-fast_voc summary: 108 layers, 39945921 parameters, 0 gradients, 76.0 GFLO
                    all       4952      12032      0.734      0.704      0.745       0.45
              aeroplane       4952        285      0.759      0.747      0.796      0.427
 Speed: 0.1ms pre-process, 4.3ms inference, 1.6ms NMS per image at shape (32, 3, 640, 640)
-# python3 val.py --weights runs/yolov3_coco.pt --data coco.yaml --device 4
+# python3 val.py --weights runs/yolov3_coco.pt --data coco.yaml --device 0
 yolov3_coco summary: 198 layers, 67561245 parameters, 0 gradients, 152.5 GFLOPs
-Speed: 0.1ms pre-process, 6.9ms inference, 3.8ms NMS per image at shape (32, 3, 640, 640)
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.370
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.604
-# python3 val.py --weights runs/yolov3-fast_coco.pt --data coco.yaml --device 4
+Speed: 0.1ms pre-process, 6.9ms inference, 2.1ms NMS per image at shape (32, 3, 640, 640)
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.400
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.620
+# python3 val.py --weights runs/yolov3-fast_coco.pt --data coco.yaml --device 0
 yolov3-fast_coco summary: 108 layers, 40269021 parameters, 0 gradients, 77.0 GFLOPs
-Speed: 0.1ms pre-process, 4.3ms inference, 4.5ms NMS per image at shape (32, 3, 640, 640)
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.309
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.547
+Speed: 0.1ms pre-process, 4.4ms inference, 2.2ms NMS per image at shape (32, 3, 640, 640)
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.329
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.560
 ```
 
 ### 预测
