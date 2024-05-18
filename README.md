@@ -49,13 +49,13 @@
     <td class="tg-fr9f">COCO AP[IoU=0.50:0.95]</td>
     <td class="tg-zkss">0.310</td>
     <td class="tg-9y4h">0.311</td>
-    <td class="tg-9y4h">0.370</td>
+    <td class="tg-9y4h">0.400</td>
   </tr>
   <tr>
     <td class="tg-baqh">COCO AP[IoU=0.50]</td>
     <td class="tg-baqh">0.553</td>
     <td class="tg-baqh">0.558</td>
-    <td class="tg-baqh">0.604</td>
+    <td class="tg-baqh">0.620</td>
   </tr>
 </tbody>
 </table>
@@ -124,7 +124,7 @@ yolov3_voc summary: 198 layers, 67238145 parameters, 0 gradients, 151.5 GFLOPs
                    all       4952      12032      0.811      0.742      0.816      0.568
              aeroplane       4952        285      0.938      0.791      0.897      0.607
 Speed: 0.1ms pre-process, 6.8ms inference, 1.6ms NMS per image at shape (32, 3, 640, 640)
-# python3 val.py --weights runs/yolov3-fast.pt --data VOC.yaml --device 0
+# python3 val.py --weights runs/yolov3-fast_voc.pt --data VOC.yaml --device 0
 yolov3-fast_voc summary: 108 layers, 39945921 parameters, 0 gradients, 76.0 GFLOPs
                  Class     Images  Instances          P          R      mAP50   mAP50-95: 100%|██████████| 155/155 00:52
                    all       4952      12032      0.734      0.704      0.745       0.45
