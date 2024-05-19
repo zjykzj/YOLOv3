@@ -77,6 +77,7 @@
 
 ## Latest News
 
+* ***[2024/05/19][v5.1](https://github.com/zjykzj/YOLOv3/releases/tag/v5.1). Optimize YOLOv3Loss. Use BCELoss instead of MSELoss for confidence loss calculation.***
 * ***[2024/05/09][v5.0](https://github.com/zjykzj/YOLOv3/releases/tag/v5.0). Refactoring YOLOv3 project, integrating yolov5 v7.0, reimplementing YOLOv3/YOLOv3-fast and YOLOv3Loss.***
 * ***[2023/07/19][v4.0](https://github.com/zjykzj/YOLOv3/releases/tag/v4.0). Add [ultralytics/yolov5](https://github.com/ultralytics/yolov5)([485da42](https://github.com/ultralytics/yolov5/commit/485da42273839d20ea6bdaf142fd02c1027aba61)) transforms and support AMP training.***
 * ***[2023/06/22][v3.2](https://github.com/zjykzj/YOLOv3/releases/tag/v3.2). Remove Excess Code and Implementation.***
