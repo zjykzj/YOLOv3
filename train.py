@@ -62,6 +62,7 @@ from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_devi
 
 from models.yolov2v3.yolov2loss import YOLOv2Loss
 from models.yolov2v3.yolov3loss import YOLOv3Loss
+from models.yolov2v3.iouloss import IOULoss
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -258,6 +259,12 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         compute_loss = YOLOv2Loss(model)
     elif opt.yolov3loss:
         compute_loss = YOLOv3Loss(model)
+    elif opt.giou:
+        compute_loss = IOULoss(model, GIoU=True)
+    elif opt.diou:
+        compute_loss = IOULoss(model, GIoU=False, DIoU=True)
+    elif opt.ciou:
+        compute_loss = IOULoss(model, GIoU=False, DIoU=False, CIoU=True)
     else:
         compute_loss = ComputeLoss(model)  # init loss class
     callbacks.run('on_train_start')
@@ -484,6 +491,11 @@ def parse_opt(known=False):
     # YOLOv2/YOLOv3
     parser.add_argument('--yolov2loss', action='store_true', help='Using the YOLOv2 loss function')
     parser.add_argument('--yolov3loss', action='store_true', help='Using the YOLOv3 loss function')
+
+    # GIoU/DIoU/CIoU
+    parser.add_argument('--giou', action='store_true', help='Using the GIoU loss function')
+    parser.add_argument('--diou', action='store_true', help='Using the DIoU loss function')
+    parser.add_argument('--ciou', action='store_true', help='Using the CIoU loss function')
 
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
